@@ -35,6 +35,16 @@ class Omni_Reports_Data_Store {
 	 * @param string[] $items
 	 * @return string  Comma-separated quoted values ready for SQL IN (...).
 	 */
+	/**
+	 * Check whether the WC analytics tables exist (WC 4.0+).
+	 */
+	public function analytics_tables_exist() {
+		$table = $this->wpdb->prefix . 'wc_order_stats';
+		return (bool) $this->wpdb->get_var(
+			$this->wpdb->prepare( 'SHOW TABLES LIKE %s', $table )
+		);
+	}
+
 	private function in_list( array $items ) {
 		return implode( ',', array_map( function ( $s ) {
 			return "'" . esc_sql( $s ) . "'";

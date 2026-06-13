@@ -124,7 +124,9 @@ class Omni_Reports_Ajax {
 	public function handle_omni_get_dashboard() {
 		$this->verify_nonce();
 		[ $from, $to ] = $this->dates();
-		wp_send_json_success( $this->ds->get_dashboard_summary( $from, $to ) );
+		$data = $this->ds->get_dashboard_summary( $from, $to );
+		$data['analytics_tables_exist'] = $this->ds->analytics_tables_exist();
+		wp_send_json_success( $data );
 	}
 
 	public function handle_omni_run_builder() {

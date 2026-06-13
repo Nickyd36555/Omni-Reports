@@ -39,7 +39,7 @@ jQuery(function($){
 			var k=r.data, f=omniReports.formatCurrency;
 			$('#kpi-revenue').text(f(k.revenue));
 			$('#kpi-net_revenue').text(f(k.net_revenue));
-			$('#kpi-orders').text(parseInt(k.orders).toLocaleString());
+			$('#kpi-orders').text((parseInt(k.orders) || 0).toLocaleString());
 			$('#kpi-avg').text(f(k.avg_order_value));
 			$('#kpi-refunds').text(f(k.refunds));
 			$('#kpi-tax').text(f(k.tax));

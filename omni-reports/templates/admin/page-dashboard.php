@@ -4,6 +4,7 @@
 
 	<?php include __DIR__ . '/partials/date-filter.php'; ?>
 
+	<div id="omni-analytics-notice"></div>
 	<div class="omni-kpi-grid" id="omni-kpi-grid">
 		<div class="omni-kpi-card" data-metric="revenue"><span class="omni-kpi-label"><?php esc_html_e( 'Gross Revenue', 'omni-reports' ); ?></span><span class="omni-kpi-value" id="kpi-revenue">—</span></div>
 		<div class="omni-kpi-card" data-metric="net_revenue"><span class="omni-kpi-label"><?php esc_html_e( 'Net Revenue', 'omni-reports' ); ?></span><span class="omni-kpi-value" id="kpi-net_revenue">—</span></div>
@@ -30,11 +31,14 @@ jQuery(function($){
 	omniReports.loadDashboard = function(from, to){
 		$.post(omniReports.ajaxUrl, {action:'omni_get_dashboard', nonce:omniReports.nonce, date_from:from, date_to:to}, function(r){
 			if(!r.success) return;
+			if(!r.data.analytics_tables_exist){
+				$('#omni-analytics-notice').html('<div class="notice notice-warning inline"><p><strong>Omni Reports:</strong> WooCommerce analytics tables not found. Go to <a href="'+ajaxurl.replace('admin-ajax.php','admin.php?page=wc-status&tab=tools')+'">WooCommerce &rarr; Status &rarr; Tools</a> and run <em>Update database</em> or <em>Clear analytics cache</em> to populate them.</p></div>');
+			}
 			var k = r.data.kpis;
 			var fmt = omniReports.formatCurrency;
 			$('#kpi-revenue').text(fmt(k.revenue));
 			$('#kpi-net_revenue').text(fmt(k.net_revenue));
-			$('#kpi-orders').text(parseInt(k.orders).toLocaleString());
+			$('#kpi-orders').text((parseInt(k.orders) || 0).toLocaleString());
 			$('#kpi-avg_order_value').text(fmt(k.avg_order_value));
 			$('#kpi-refunds').text(fmt(k.refunds));
 			$('#kpi-tax').text(fmt(k.tax));
