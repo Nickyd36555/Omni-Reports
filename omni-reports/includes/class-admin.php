@@ -114,6 +114,13 @@ class Omni_Reports_Admin {
 	public function render_page() {
 		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'omni-reports';
 
+		// Output stylesheet directly — guarantees it loads even if enqueue hook missed.
+		$css_url = OMNI_REPORTS_URL . 'assets/css/omni-reports-admin.css?v=' . OMNI_REPORTS_VERSION;
+		echo '<link rel="stylesheet" href="' . esc_url( $css_url ) . '" />';
+
+		// Dashicons (usually already loaded in admin, but ensure it).
+		echo '<link rel="stylesheet" href="' . esc_url( includes_url( 'css/dashicons.min.css' ) ) . '" />';
+
 		$map = [
 			'omni-reports'            => 'page-dashboard',
 			'omni-reports-sales'      => 'page-sales',
