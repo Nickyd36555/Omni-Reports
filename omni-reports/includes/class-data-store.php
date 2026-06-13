@@ -404,29 +404,79 @@ class Omni_Reports_Data_Store {
 	 * @param string $date_to
 	 * @return array
 	 */
-	public function get_coupons_report( $date_from, $date_to ) {
+	public function get_coupons_report( $date_from, $date_to, $search = '' ) {
 		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
 		$cl            = $this->wpdb->prefix . 'wc_order_coupon_lookup';
 		$os            = $this->wpdb->prefix . 'wc_order_stats';
 
+		// Check if analytics tables exist.
+		if ( $this->analytics_tables_exist() ) {
+			$search_clause = '';
+			if ( $search ) {
+				$like          = '%' . $this->wpdb->esc_like( $search ) . '%';
+				$search_clause = $this->wpdb->prepare( ' AND cl.coupon_code LIKE %s', $like );
+			}
+
+			$sql = $this->wpdb->prepare(
+				"SELECT
+					cl.coupon_id,
+					cl.coupon_code,
+					COUNT(DISTINCT cl.order_id)  AS usage_count,
+					SUM(cl.discount_amount)      AS discount_amount,
+					SUM(os.net_total)            AS revenue
+				FROM {$cl} cl
+				INNER JOIN {$os} os ON cl.order_id = os.order_id
+				WHERE os.status NOT IN ({$this->excluded_in()})
+				  AND os.date_created BETWEEN %s AND %s
+				  {$search_clause}
+				GROUP BY cl.coupon_id, cl.coupon_code
+				ORDER BY usage_count DESC
+				LIMIT 200",
+				$from,
+				$to
+			);
+
+			$rows = $this->wpdb->get_results( $sql );
+			if ( ! empty( $rows ) ) {
+				return $rows;
+			}
+		}
+
+		// Fallback: query from posts/postmeta + order_itemmeta for older WC or empty analytics tables.
+		$search_clause = '';
+		$args          = [];
+		if ( $search ) {
+			$like          = '%' . $this->wpdb->esc_like( $search ) . '%';
+			$search_clause = 'AND p.post_title LIKE %s';
+			$args[]        = $like;
+		}
+
+		$args[] = $from;
+		$args[] = $to;
+
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders
 		$sql = $this->wpdb->prepare(
 			"SELECT
-				cl.coupon_id,
-				cl.coupon_code,
-				COUNT(cl.order_id)          AS usage_count,
-				SUM(cl.discount_amount)     AS discount_amount,
-				SUM(os.total_sales)         AS revenue
-			FROM {$cl} cl
-			INNER JOIN {$os} os ON cl.order_id = os.order_id
-			WHERE os.status NOT IN ({$this->excluded_in()})
-			  AND os.date_created BETWEEN %s AND %s
-			GROUP BY cl.coupon_id
-			ORDER BY usage_count DESC",
-			$from,
-			$to
+				p.ID                     AS coupon_id,
+				p.post_title             AS coupon_code,
+				COUNT(DISTINCT oi.order_id) AS usage_count,
+				SUM(oim.meta_value + 0)  AS discount_amount,
+				0                        AS revenue
+			FROM {$this->wpdb->posts} p
+			INNER JOIN {$this->wpdb->prefix}woocommerce_order_itemmeta oim ON oim.meta_key = 'coupon_data'
+			INNER JOIN {$this->wpdb->prefix}woocommerce_order_items oi ON oi.order_item_id = oim.order_item_id AND oi.order_item_type = 'coupon' AND oi.order_item_name = p.post_title
+			INNER JOIN {$this->wpdb->posts} o ON o.ID = oi.order_id
+			WHERE p.post_type = 'shop_coupon'
+			  AND p.post_status = 'publish'
+			  {$search_clause}
+			  AND o.post_date BETWEEN %s AND %s
+			GROUP BY p.ID
+			ORDER BY usage_count DESC
+			LIMIT 200",
+			...$args
 		);
 
-		return $this->wpdb->get_results( $sql );
+		return $this->wpdb->get_results( $sql ) ?: [];
 	}
 
 	// -------------------------------------------------------------------------

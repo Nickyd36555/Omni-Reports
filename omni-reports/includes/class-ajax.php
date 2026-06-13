@@ -112,7 +112,8 @@ class Omni_Reports_Ajax {
 	public function handle_omni_get_coupons_report() {
 		$this->verify_nonce();
 		[ $from, $to ] = $this->dates();
-		wp_send_json_success( $this->ds->get_coupons_report( $from, $to ) );
+		$search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+		wp_send_json_success( $this->ds->get_coupons_report( $from, $to, $search ) );
 	}
 
 	public function handle_omni_get_tax_report() {
