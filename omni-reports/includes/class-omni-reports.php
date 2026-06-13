@@ -41,6 +41,7 @@ class Omni_Reports {
 	private function __construct() {
 		$this->admin = new Omni_Reports_Admin();
 		$this->ajax  = new Omni_Reports_Ajax();
+		new Omni_Reports_Updater();
 	}
 
 	/**

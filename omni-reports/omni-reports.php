@@ -53,6 +53,7 @@ function omni_reports_init() {
 	require_once OMNI_REPORTS_DIR . 'includes/class-report-builder.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-ajax.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-admin.php';
+	require_once OMNI_REPORTS_DIR . 'includes/class-updater.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-omni-reports.php';
 
 	Omni_Reports::instance();
