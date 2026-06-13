@@ -267,6 +267,7 @@ class Omni_Reports_Ajax {
 			'csv_export'  => ! empty( $data['csv_export'] ),
 			'printable'   => ! empty( $data['printable'] ),
 			'page_slug'   => sanitize_key( $data['page_slug'] ?? '' ),
+			'columns'     => array_map( 'sanitize_key', (array) ( $data['columns'] ?? [] ) ),
 		];
 
 		Omni_Reports_Registry::save( $report );

@@ -54,6 +54,25 @@
 		dateCallbacks.push(cb);
 	};
 
+	// ── Column visibility ────────────────────────────────────────────────────
+
+	/**
+	 * Returns true if a column key is enabled for a given report slug.
+	 * Falls back to the default definitions if no saved columns exist.
+	 */
+	omniReports.colEnabled = function (slug, key) {
+		var saved = (omniReports.reportColumns || {})[slug];
+		if (saved && saved.length) {
+			return saved.indexOf(key) !== -1;
+		}
+		// Fall back to default definitions.
+		var defs = (omniReports.columnDefs || {})[slug] || [];
+		for (var i = 0; i < defs.length; i++) {
+			if (defs[i].key === key) return !! defs[i].on;
+		}
+		return true; // unknown column — show by default.
+	};
+
 	// ── Currency ─────────────────────────────────────────────────────────────
 
 	omniReports.formatCurrency = function (val) {

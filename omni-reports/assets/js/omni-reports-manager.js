@@ -58,6 +58,44 @@
 		$('.omni-icon-option[data-icon="' + ( report.icon || 'dashicons-chart-bar' ) + '"]').addClass('selected');
 		$('.omni-color-option').removeClass('selected');
 		$('.omni-color-option[data-color="' + ( report.color || 'teal' ) + '"]').addClass('selected');
+
+		// Populate Modify tab.
+		populateModifyTab( report );
+	}
+
+	function populateModifyTab( report ) {
+		var slug = report.slug || '';
+		var defs = (omniReports.columnDefs || {})[ slug ] || [];
+		var saved = report.columns || null;
+
+		if ( ! defs.length ) {
+			$('#omni-modify-columns').html('<p style="color:#A0AEC0;font-size:13px">No customisable columns for this report type.</p>');
+			return;
+		}
+
+		// Determine which keys are currently enabled.
+		var enabled = {};
+		if ( saved && saved.length ) {
+			saved.forEach(function(k){ enabled[k] = true; });
+		} else {
+			defs.forEach(function(c){ if(c.on) enabled[c.key] = true; });
+		}
+
+		var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+		defs.forEach(function(col){
+			var chk = enabled[col.key] ? 'checked' : '';
+			html += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;background:' + (enabled[col.key]?'rgba(0,212,170,.06)':'#fff') + '">' +
+				'<input type="checkbox" class="omni-col-toggle" data-key="' + col.key + '" ' + chk + ' style="accent-color:#00D4AA;width:16px;height:16px"> ' +
+				'<span>' + col.label + '</span></label>';
+		});
+		html += '</div>';
+		$('#omni-modify-columns').html(html);
+
+		// Highlight checked state on toggle.
+		$('#omni-modify-columns').off('change').on('change', '.omni-col-toggle', function(){
+			var $lbl = $(this).closest('label');
+			$lbl.css('background', this.checked ? 'rgba(0,212,170,.06)' : '#fff');
+		});
 	}
 
 	// ── Slug auto-generation ─────────────────────────────────────────────────
@@ -93,6 +131,12 @@
 
 		var slug = $.trim( $('#rpt-slug').val() ) || slugify( name );
 
+		// Collect enabled columns from Modify tab.
+		var columns = [];
+		$('#omni-modify-columns .omni-col-toggle:checked').each(function(){
+			columns.push( $(this).data('key') );
+		});
+
 		var report = {
 			id:          editingId || ( 'rpt_' + Date.now() ),
 			name:        name,
@@ -106,7 +150,8 @@
 			description: $('#rpt-description').val(),
 			csv_export:  $('#rpt-csv').is(':checked'),
 			printable:   $('#rpt-print').is(':checked'),
-			type:        'custom',
+			columns:     columns,
+			type:        editingId ? undefined : 'custom',
 			required:    false,
 			page_slug:   'omni-reports-builder',
 		};

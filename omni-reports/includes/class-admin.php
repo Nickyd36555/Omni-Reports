@@ -89,12 +89,14 @@ class Omni_Reports_Admin {
 		$current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'omni-reports';
 
 		wp_localize_script( 'omni-reports-admin', 'omniReports', [
-			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-			'nonce'       => wp_create_nonce( 'omni_reports_nonce' ),
-			'currency'    => get_woocommerce_currency_symbol(),
-			'currentPage' => $current_page,
-			'adminUrl'    => admin_url( 'admin.php' ),
-			'categories'  => Omni_Reports_Registry::categories(),
+			'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
+			'nonce'           => wp_create_nonce( 'omni_reports_nonce' ),
+			'currency'        => get_woocommerce_currency_symbol(),
+			'currentPage'     => $current_page,
+			'adminUrl'        => admin_url( 'admin.php' ),
+			'categories'      => Omni_Reports_Registry::categories(),
+			'columnDefs'      => Omni_Reports_Columns::definitions(),
+			'reportColumns'   => $this->get_all_report_columns(),
 		] );
 
 		if ( $current_page === 'omni-reports-builder' ) {
@@ -173,6 +175,16 @@ class Omni_Reports_Admin {
 			echo '<a class="omni-sub-nav-link' . esc_attr( $active ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug ) ) . '">' . esc_html( $r['name'] ) . '</a>';
 		}
 		echo '</nav>';
+	}
+
+	private function get_all_report_columns() {
+		$out     = [];
+		$reports = Omni_Reports_Registry::get_all();
+		foreach ( $reports as $r ) {
+			$slug = $r['slug'] ?? '';
+			$out[ $slug ] = Omni_Reports_Columns::get_enabled( $slug, $r['columns'] ?? [] );
+		}
+		return $out;
 	}
 
 	private function render( $template ) {
