@@ -596,6 +596,192 @@ class Omni_Reports_Data_Store {
 	}
 
 	// -------------------------------------------------------------------------
+	// Profit
+	// -------------------------------------------------------------------------
+
+	public function get_profit_report( $date_from, $date_to, $group = 'day' ) {
+		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
+		$table         = $this->wpdb->prefix . 'wc_order_stats';
+
+		switch ( $group ) {
+			case 'week':
+				$date_expr = 'DATE(date_created - INTERVAL (WEEKDAY(date_created)) DAY)';
+				break;
+			case 'month':
+				$date_expr = "DATE_FORMAT(date_created,'%Y-%m-01')";
+				break;
+			case 'year':
+				$date_expr = "DATE_FORMAT(date_created,'%Y-01-01')";
+				break;
+			default:
+				$date_expr = 'DATE(date_created)';
+		}
+
+		$sql = $this->wpdb->prepare(
+			"SELECT
+				{$date_expr}             AS report_date,
+				SUM(total_sales)         AS gross_sales,
+				SUM(shipping_total)      AS shipping_total,
+				SUM(tax_total)           AS tax_total,
+				SUM(net_total)           AS net_total,
+				COUNT(*)                 AS orders
+			FROM {$table}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s
+			GROUP BY report_date
+			ORDER BY report_date ASC",
+			$from,
+			$to
+		);
+		$rows = $this->wpdb->get_results( $sql );
+
+		$product_costs = get_option( 'omni_product_costs', [] );
+
+		// Get product costs per order for the period.
+		$pl  = $this->wpdb->prefix . 'wc_order_product_lookup';
+		$os2 = $this->wpdb->prefix . 'wc_order_stats';
+		$cost_sql = $this->wpdb->prepare(
+			"SELECT
+				{$date_expr}              AS report_date,
+				pl.product_id,
+				SUM(pl.product_qty)       AS qty
+			FROM {$pl} pl
+			INNER JOIN {$os2} os ON pl.order_id = os.order_id
+			WHERE os.status NOT IN ({$this->excluded_in()})
+			  AND os.date_created BETWEEN %s AND %s
+			GROUP BY report_date, pl.product_id",
+			$from,
+			$to
+		);
+		$cost_rows = $this->wpdb->get_results( $cost_sql );
+
+		// Build cost per date.
+		$costs_by_date = [];
+		foreach ( $cost_rows as $cr ) {
+			$cost_per_unit = isset( $product_costs[ $cr->product_id ] ) ? floatval( $product_costs[ $cr->product_id ] ) : 0;
+			$date          = $cr->report_date;
+			if ( ! isset( $costs_by_date[ $date ] ) ) {
+				$costs_by_date[ $date ] = 0;
+			}
+			$costs_by_date[ $date ] += $cost_per_unit * floatval( $cr->qty );
+		}
+
+		// Enrich rows.
+		$totals = [
+			'gross_sales'    => 0,
+			'product_cost'   => 0,
+			'shipping_total' => 0,
+			'tax_total'      => 0,
+			'gross_profit'   => 0,
+			'orders'         => 0,
+		];
+		foreach ( $rows as &$row ) {
+			$product_cost          = $costs_by_date[ $row->report_date ] ?? 0;
+			$row->product_cost     = round( $product_cost, 2 );
+			$row->gross_cost       = round( $product_cost + floatval( $row->shipping_total ) + floatval( $row->tax_total ), 2 );
+			$row->gross_profit     = round( floatval( $row->gross_sales ) - $row->gross_cost, 2 );
+			$row->profit_margin    = floatval( $row->gross_sales ) > 0
+				? round( ( $row->gross_profit / floatval( $row->gross_sales ) ) * 100, 2 )
+				: 0;
+			$totals['gross_sales']    += floatval( $row->gross_sales );
+			$totals['product_cost']   += $product_cost;
+			$totals['shipping_total'] += floatval( $row->shipping_total );
+			$totals['tax_total']      += floatval( $row->tax_total );
+			$totals['gross_profit']   += $row->gross_profit;
+			$totals['orders']         += intval( $row->orders );
+		}
+		unset( $row );
+
+		$totals['gross_cost']    = round( $totals['product_cost'] + $totals['shipping_total'] + $totals['tax_total'], 2 );
+		$totals['gross_profit']  = round( $totals['gross_profit'], 2 );
+		$totals['profit_margin'] = $totals['gross_sales'] > 0
+			? round( ( $totals['gross_profit'] / $totals['gross_sales'] ) * 100, 2 )
+			: 0;
+		$totals['avg_profit']    = $totals['orders'] > 0
+			? round( $totals['gross_profit'] / $totals['orders'], 2 )
+			: 0;
+
+		return [
+			'rows'   => $rows,
+			'totals' => $totals,
+		];
+	}
+
+	// -------------------------------------------------------------------------
+	// Refunds
+	// -------------------------------------------------------------------------
+
+	public function get_refunds_report( $date_from, $date_to ) {
+		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
+		$os            = $this->wpdb->prefix . 'wc_order_stats';
+
+		// Summary.
+		$summary_sql = $this->wpdb->prepare(
+			"SELECT
+				SUM(total_refunds)          AS total_refunded,
+				SUM(CASE WHEN total_refunds > 0 THEN 1 ELSE 0 END) AS refund_count,
+				COUNT(*)                    AS total_orders,
+				COALESCE(AVG(CASE WHEN total_refunds > 0 THEN total_refunds END), 0) AS avg_refund
+			FROM {$os}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s",
+			$from,
+			$to
+		);
+		$summary = $this->wpdb->get_row( $summary_sql );
+		if ( $summary ) {
+			$summary->refund_rate = $summary->total_orders > 0
+				? round( ( $summary->refund_count / $summary->total_orders ) * 100, 2 )
+				: 0;
+		}
+
+		// Over time.
+		$over_time_sql = $this->wpdb->prepare(
+			"SELECT
+				DATE(date_created)          AS report_date,
+				SUM(total_refunds)          AS refunded,
+				SUM(CASE WHEN total_refunds > 0 THEN 1 ELSE 0 END) AS refund_count
+			FROM {$os}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s
+			GROUP BY report_date
+			ORDER BY report_date ASC",
+			$from,
+			$to
+		);
+		$over_time = $this->wpdb->get_results( $over_time_sql );
+
+		// Top refunded products.
+		$pl = $this->wpdb->prefix . 'wc_order_product_lookup';
+		$posts = $this->wpdb->posts;
+		$top_sql = $this->wpdb->prepare(
+			"SELECT
+				pl.product_id,
+				p.post_title                    AS product_name,
+				COUNT(DISTINCT pl.order_id)     AS refund_count,
+				SUM(pl.product_gross_revenue)   AS refund_amount
+			FROM {$pl} pl
+			INNER JOIN {$os} os ON pl.order_id = os.order_id
+			LEFT JOIN {$posts} p ON pl.product_id = p.ID
+			WHERE os.status NOT IN ({$this->excluded_in()})
+			  AND os.date_created BETWEEN %s AND %s
+			  AND os.total_refunds > 0
+			GROUP BY pl.product_id
+			ORDER BY refund_amount DESC
+			LIMIT 20",
+			$from,
+			$to
+		);
+		$top_products = $this->wpdb->get_results( $top_sql );
+
+		return [
+			'summary'      => $summary,
+			'over_time'    => $over_time,
+			'top_products' => $top_products,
+		];
+	}
+
+	// -------------------------------------------------------------------------
 	// Dashboard KPIs
 	// -------------------------------------------------------------------------
 

@@ -947,3 +947,52 @@
 	.omni-export-bar, .omni-builder-panel, .omni-nav-links,
 	.omni-manager-actions, .omni-filter-tabs { display: none !important; }
 }
+
+/* ── Period-Comparison KPI Cards ─────────────────────────── */
+.omni-kpi-positive { border-left: 3px solid #00D4AA; }
+.omni-kpi-negative { border-left: 3px solid #FC8181; }
+.omni-kpi-change { font-size: 11px; font-weight: 600; margin-top: 4px; display: block; }
+.omni-change-up { color: #00A389; }
+.omni-change-down { color: #C53030; }
+.omni-period-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 20px;
+	background: #EDF2F7;
+	color: #718096;
+	font-size: 11px;
+	font-weight: 500;
+}
+
+/* ── Dual-axis chart wrapper ─────────────────────────────── */
+.omni-dual-chart { position: relative; width: 100%; }
+
+/* ── Profit Breakdown grid ───────────────────────────────── */
+.omni-profit-breakdown {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+.omni-profit-breakdown-item {
+	background: var(--omni-bg);
+	border-radius: 8px;
+	padding: 12px 14px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+.omni-profit-breakdown-label { font-size: 12px; color: var(--omni-muted); font-weight: 500; }
+.omni-profit-breakdown-value { font-size: 14px; font-weight: 700; color: var(--omni-text); }
+
+/* ── Cost Manager table ──────────────────────────────────── */
+.omni-costs-table .omni-cost-input:focus {
+	border-color: var(--omni-primary) !important;
+	box-shadow: 0 0 0 2px rgba(0,212,170,.2);
+	outline: none;
+}
+
+/* ── Sortable table header indicators ───────────────────── */
+.omni-data-table th:hover::after { content: ' ▲▼'; font-size: 9px; opacity: .5; }
+
+/* ── Comp hidden inputs ──────────────────────────────────── */
+#omni-comp-from, #omni-comp-to { display: none; }

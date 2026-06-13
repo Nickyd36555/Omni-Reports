@@ -40,6 +40,9 @@ class Omni_Reports_Admin {
 			'omni-reports-tax'        => [ $this, 'render_page' ],
 			'omni-reports-shipping'   => [ $this, 'render_page' ],
 			'omni-reports-builder'    => [ $this, 'render_page' ],
+			'omni-reports-profit'  => [ $this, 'render_page' ],
+			'omni-reports-refunds' => [ $this, 'render_page' ],
+			'omni-reports-costs'   => [ $this, 'render_page' ],
 		];
 
 		foreach ( $subpages as $slug => $cb ) {
@@ -135,6 +138,9 @@ class Omni_Reports_Admin {
 			'omni-reports-tax'        => 'page-tax',
 			'omni-reports-shipping'   => 'page-shipping',
 			'omni-reports-builder'    => 'page-builder',
+			'omni-reports-profit'  => 'page-profit',
+			'omni-reports-refunds' => 'page-refunds',
+			'omni-reports-costs'   => 'page-costs',
 		];
 
 		$template = $map[ $page ] ?? 'page-dashboard';
@@ -151,6 +157,7 @@ class Omni_Reports_Admin {
 		$tabs = [
 			'omni-reports'         => __( 'Sales Reports', 'omni-reports' ),
 			'omni-reports-builder' => __( 'Report Builder', 'omni-reports' ),
+			'omni-reports-costs' => 'Cost Manager',
 		];
 		echo '<nav class="omni-top-nav">';
 		echo '<a class="omni-top-nav-brand" href="' . esc_url( admin_url( 'admin.php?page=omni-reports' ) ) . '">';
