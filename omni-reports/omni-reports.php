@@ -3,7 +3,7 @@
  * Plugin Name: Omni Reports
  * Plugin URI:  https://github.com/Nickyd36555/Omni-Reports
  * Description: Comprehensive WooCommerce reporting with 9 standard reports and a custom report builder.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      Omni Reports
  * Author URI:  https://github.com/Nickyd36555/Omni-Reports
  * License:     GPL-2.0+
@@ -20,7 +20,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'OMNI_REPORTS_VERSION', '1.0.0' );
+define( 'OMNI_REPORTS_VERSION', '1.0.1' );
 define( 'OMNI_REPORTS_FILE', __FILE__ );
 define( 'OMNI_REPORTS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OMNI_REPORTS_URL', plugin_dir_url( __FILE__ ) );
