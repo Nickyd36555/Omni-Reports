@@ -48,10 +48,13 @@ class Omni_Reports_Admin {
 	}
 
 	public function enqueue_assets( $hook ) {
-		if ( strpos( $hook, 'omni-reports' ) === false ) {
+		// Check hook name OR the page query param (hidden subpages sometimes use different hooks).
+		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+		if ( strpos( $hook, 'omni-reports' ) === false && strpos( $page, 'omni-reports' ) === false ) {
 			return;
 		}
 
+		wp_enqueue_style( 'dashicons' );
 		wp_enqueue_style(
 			'omni-reports-admin',
 			OMNI_REPORTS_URL . 'assets/css/omni-reports-admin.css',
