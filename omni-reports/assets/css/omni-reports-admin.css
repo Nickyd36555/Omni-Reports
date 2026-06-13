@@ -1,0 +1,317 @@
+/* Omni Reports Admin Styles */
+
+.omni-reports-wrap {
+	max-width: 1400px;
+}
+
+.omni-reports-wrap h1 {
+	margin-bottom: 16px;
+	font-size: 24px;
+	color: #1d2327;
+}
+
+/* ── Date Filter ── */
+.omni-date-filter {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 24px;
+	padding: 12px 16px;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+}
+
+.omni-presets {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+}
+
+.omni-preset.active {
+	background: #2271b1;
+	color: #fff;
+	border-color: #2271b1;
+}
+
+.omni-custom-dates {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.omni-custom-dates label {
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.omni-custom-dates input[type="date"] {
+	padding: 4px 8px;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+}
+
+.omni-export-bar {
+	margin-left: auto;
+	display: flex;
+	gap: 6px;
+}
+
+/* ── KPI Cards ── */
+.omni-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.omni-kpi-card {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 20px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.omni-kpi-label {
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	color: #646970;
+	font-weight: 600;
+}
+
+.omni-kpi-value {
+	font-size: 26px;
+	font-weight: 700;
+	color: #1d2327;
+}
+
+/* ── Chart Cards ── */
+.omni-chart-card {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 24px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.omni-chart-card h2 {
+	font-size: 16px;
+	margin: 0 0 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.omni-group-toggle {
+	display: flex;
+	gap: 4px;
+}
+
+.omni-group.active {
+	background: #2271b1;
+	color: #fff;
+	border-color: #2271b1;
+}
+
+/* ── Tables ── */
+.omni-data-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+.omni-data-table th,
+.omni-data-table td {
+	padding: 10px 12px;
+	text-align: left;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.omni-data-table th {
+	background: #f6f7f7;
+	font-weight: 600;
+	color: #1d2327;
+	cursor: pointer;
+	user-select: none;
+}
+
+.omni-data-table th:hover {
+	background: #eee;
+}
+
+.omni-data-table tr:last-child td {
+	border-bottom: none;
+}
+
+.omni-data-table tr:hover td {
+	background: #f9f9f9;
+}
+
+.omni-data-table .num {
+	text-align: right;
+}
+
+/* ── Two column layout ── */
+.omni-two-col {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
+	margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+	.omni-two-col {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ── Nav links ── */
+.omni-nav-links {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-top: 8px;
+}
+
+/* ── Report Builder ── */
+.omni-builder-layout {
+	display: grid;
+	grid-template-columns: 300px 1fr;
+	gap: 24px;
+	align-items: start;
+}
+
+@media (max-width: 1100px) {
+	.omni-builder-layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+.omni-builder-panel {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.06);
+	position: sticky;
+	top: 32px;
+}
+
+.omni-builder-panel h2 {
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	color: #646970;
+	margin: 0 0 10px;
+}
+
+.omni-builder-panel hr {
+	margin: 16px 0;
+	border: none;
+	border-top: 1px solid #f0f0f0;
+}
+
+.omni-builder-panel label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 13px;
+}
+
+.omni-builder-panel input[type="date"],
+.omni-builder-panel input[type="number"],
+.omni-builder-panel input[type="text"],
+.omni-builder-panel select {
+	width: 100%;
+	margin-top: 4px;
+	padding: 6px 8px;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	font-size: 13px;
+}
+
+.omni-checkboxes {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.omni-checkboxes label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+	font-size: 13px;
+}
+
+.omni-builder-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.omni-save-report {
+	display: flex;
+	gap: 8px;
+}
+
+.omni-save-report input {
+	flex: 1;
+}
+
+.omni-builder-results {
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,.06);
+	min-height: 300px;
+}
+
+.omni-empty-state {
+	color: #646970;
+	text-align: center;
+	padding: 60px 20px;
+	font-size: 15px;
+}
+
+.omni-delete-saved {
+	color: #b32d2e !important;
+	border-color: #b32d2e !important;
+}
+
+/* ── Loading spinner ── */
+.omni-loading {
+	text-align: center;
+	padding: 40px;
+	color: #646970;
+}
+
+.omni-loading::after {
+	content: '';
+	display: inline-block;
+	width: 24px;
+	height: 24px;
+	border: 3px solid #ddd;
+	border-top-color: #2271b1;
+	border-radius: 50%;
+	animation: omni-spin .7s linear infinite;
+	margin-left: 8px;
+	vertical-align: middle;
+}
+
+@keyframes omni-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* ── Print ── */
+@media print {
+	#adminmenuwrap, #wpadminbar, .omni-date-filter, .omni-export-bar,
+	.omni-builder-panel, .omni-nav-links { display: none !important; }
+	.omni-reports-wrap { max-width: 100%; }
+}
