@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin — menus, pages, asset enqueuing.
+ * Admin — single top-level menu, asset enqueuing, page routing.
  *
  * @package OmniReports
  */
@@ -17,47 +17,33 @@ class Omni_Reports_Admin {
 	public function register_menus() {
 		$cap = 'manage_woocommerce';
 
+		// Single top-level page — all navigation handled inside the plugin.
 		add_menu_page(
 			__( 'Omni Reports', 'omni-reports' ),
 			__( 'Omni Reports', 'omni-reports' ),
 			$cap,
 			'omni-reports',
-			[ $this, 'page_dashboard' ],
+			[ $this, 'render_page' ],
 			'dashicons-chart-bar',
 			56
 		);
 
-		$pages = [
-			'omni-reports'           => __( 'Dashboard', 'omni-reports' ),
-			'omni-reports-sales'     => __( 'Sales', 'omni-reports' ),
-			'omni-reports-revenue'   => __( 'Revenue Trends', 'omni-reports' ),
-			'omni-reports-products'  => __( 'Products', 'omni-reports' ),
-			'omni-reports-categories'=> __( 'Categories', 'omni-reports' ),
-			'omni-reports-customers' => __( 'Customers', 'omni-reports' ),
-			'omni-reports-orders'    => __( 'Orders', 'omni-reports' ),
-			'omni-reports-coupons'   => __( 'Coupons', 'omni-reports' ),
-			'omni-reports-tax'       => __( 'Tax', 'omni-reports' ),
-			'omni-reports-shipping'  => __( 'Shipping', 'omni-reports' ),
-			'omni-reports-builder'   => __( 'Report Builder', 'omni-reports' ),
+		// Hidden subpages for standard reports (accessible via URL, not sidebar).
+		$subpages = [
+			'omni-reports-sales'      => [ $this, 'render_page' ],
+			'omni-reports-revenue'    => [ $this, 'render_page' ],
+			'omni-reports-products'   => [ $this, 'render_page' ],
+			'omni-reports-categories' => [ $this, 'render_page' ],
+			'omni-reports-customers'  => [ $this, 'render_page' ],
+			'omni-reports-orders'     => [ $this, 'render_page' ],
+			'omni-reports-coupons'    => [ $this, 'render_page' ],
+			'omni-reports-tax'        => [ $this, 'render_page' ],
+			'omni-reports-shipping'   => [ $this, 'render_page' ],
+			'omni-reports-builder'    => [ $this, 'render_page' ],
 		];
 
-		$callbacks = [
-			'omni-reports'           => 'page_dashboard',
-			'omni-reports-sales'     => 'page_sales',
-			'omni-reports-revenue'   => 'page_revenue',
-			'omni-reports-products'  => 'page_products',
-			'omni-reports-categories'=> 'page_categories',
-			'omni-reports-customers' => 'page_customers',
-			'omni-reports-orders'    => 'page_orders',
-			'omni-reports-coupons'   => 'page_coupons',
-			'omni-reports-tax'       => 'page_tax',
-			'omni-reports-shipping'  => 'page_shipping',
-			'omni-reports-builder'   => 'page_builder',
-		];
-
-		foreach ( $pages as $slug => $title ) {
-			$cb = $callbacks[ $slug ];
-			add_submenu_page( 'omni-reports', $title, $title, $cap, $slug, [ $this, $cb ] );
+		foreach ( $subpages as $slug => $cb ) {
+			add_submenu_page( null, '', '', $cap, $slug, $cb );
 		}
 	}
 
@@ -89,13 +75,26 @@ class Omni_Reports_Admin {
 			true
 		);
 
+		wp_enqueue_script(
+			'omni-reports-manager',
+			OMNI_REPORTS_URL . 'assets/js/omni-reports-manager.js',
+			[ 'omni-reports-admin' ],
+			OMNI_REPORTS_VERSION,
+			true
+		);
+
+		$current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'omni-reports';
+
 		wp_localize_script( 'omni-reports-admin', 'omniReports', [
-			'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
-			'nonce'     => wp_create_nonce( 'omni_reports_nonce' ),
-			'currency'  => get_woocommerce_currency_symbol(),
+			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+			'nonce'       => wp_create_nonce( 'omni_reports_nonce' ),
+			'currency'    => get_woocommerce_currency_symbol(),
+			'currentPage' => $current_page,
+			'adminUrl'    => admin_url( 'admin.php' ),
+			'categories'  => Omni_Reports_Registry::categories(),
 		] );
 
-		if ( strpos( $hook, 'omni-reports-builder' ) !== false ) {
+		if ( $current_page === 'omni-reports-builder' ) {
 			wp_enqueue_script(
 				'omni-reports-builder',
 				OMNI_REPORTS_URL . 'assets/js/omni-reports-builder.js',
@@ -106,22 +105,70 @@ class Omni_Reports_Admin {
 		}
 	}
 
+	/**
+	 * Main page router — renders top nav + appropriate template.
+	 */
+	public function render_page() {
+		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'omni-reports';
+
+		$map = [
+			'omni-reports'            => 'page-dashboard',
+			'omni-reports-sales'      => 'page-sales',
+			'omni-reports-revenue'    => 'page-revenue',
+			'omni-reports-products'   => 'page-products',
+			'omni-reports-categories' => 'page-categories',
+			'omni-reports-customers'  => 'page-customers',
+			'omni-reports-orders'     => 'page-orders',
+			'omni-reports-coupons'    => 'page-coupons',
+			'omni-reports-tax'        => 'page-tax',
+			'omni-reports-shipping'   => 'page-shipping',
+			'omni-reports-builder'    => 'page-builder',
+		];
+
+		$template = $map[ $page ] ?? 'page-dashboard';
+
+		echo '<div class="omni-app">';
+		$this->render_top_nav( $page );
+		$this->render_sub_nav( $page );
+		echo '<div class="omni-page">';
+		$this->render( $template );
+		echo '</div></div>';
+	}
+
+	private function render_top_nav( $current ) {
+		$tabs = [
+			'omni-reports'         => __( 'Sales Reports', 'omni-reports' ),
+			'omni-reports-builder' => __( 'Report Builder', 'omni-reports' ),
+		];
+		echo '<nav class="omni-top-nav">';
+		echo '<a class="omni-top-nav-brand" href="' . esc_url( admin_url( 'admin.php?page=omni-reports' ) ) . '">';
+		echo '<div class="omni-logo">O</div>';
+		echo '<span>Omni Reports</span>';
+		echo '</a>';
+		foreach ( $tabs as $slug => $label ) {
+			$active = ( $current === $slug ) ? ' active' : '';
+			echo '<a class="omni-top-nav-tab' . esc_attr( $active ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug ) ) . '">' . esc_html( $label ) . '</a>';
+		}
+		echo '</nav>';
+	}
+
+	private function render_sub_nav( $current ) {
+		$reports = Omni_Reports_Registry::get_visible();
+		if ( empty( $reports ) ) return;
+
+		echo '<nav class="omni-sub-nav">';
+		foreach ( $reports as $r ) {
+			$slug   = $r['page_slug'] ?? ( 'omni-reports-' . $r['slug'] );
+			$active = ( $current === $slug ) ? ' active' : '';
+			echo '<a class="omni-sub-nav-link' . esc_attr( $active ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug ) ) . '">' . esc_html( $r['name'] ) . '</a>';
+		}
+		echo '</nav>';
+	}
+
 	private function render( $template ) {
 		$path = OMNI_REPORTS_DIR . 'templates/admin/' . $template . '.php';
 		if ( file_exists( $path ) ) {
 			include $path;
 		}
 	}
-
-	public function page_dashboard()   { $this->render( 'page-dashboard' ); }
-	public function page_sales()       { $this->render( 'page-sales' ); }
-	public function page_revenue()     { $this->render( 'page-revenue' ); }
-	public function page_products()    { $this->render( 'page-products' ); }
-	public function page_categories()  { $this->render( 'page-categories' ); }
-	public function page_customers()   { $this->render( 'page-customers' ); }
-	public function page_orders()      { $this->render( 'page-orders' ); }
-	public function page_coupons()     { $this->render( 'page-coupons' ); }
-	public function page_tax()         { $this->render( 'page-tax' ); }
-	public function page_shipping()    { $this->render( 'page-shipping' ); }
-	public function page_builder()     { $this->render( 'page-builder' ); }
 }

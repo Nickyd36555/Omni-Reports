@@ -48,6 +48,7 @@ function omni_reports_init() {
 		return;
 	}
 
+	require_once OMNI_REPORTS_DIR . 'includes/class-registry.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-data-store.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-exporter.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-report-builder.php';
@@ -64,7 +65,10 @@ add_action( 'plugins_loaded', 'omni_reports_init' );
  * Plugin activation hook.
  */
 function omni_reports_activate() {
-	// Nothing to create — we rely on WooCommerce tables.
 	update_option( 'omni_reports_version', OMNI_REPORTS_VERSION );
+	// Seed default reports on activation.
+	if ( class_exists( 'Omni_Reports_Registry' ) ) {
+		Omni_Reports_Registry::install_defaults();
+	}
 }
 register_activation_hook( __FILE__, 'omni_reports_activate' );

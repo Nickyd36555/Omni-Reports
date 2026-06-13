@@ -36,6 +36,12 @@ class Omni_Reports_Ajax {
 			'omni_delete_report',
 			'omni_get_saved_reports',
 			'omni_export_csv',
+			// Registry / Report Manager
+			'omni_get_report_registry',
+			'omni_save_report_meta',
+			'omni_delete_report_meta',
+			'omni_reorder_reports',
+			'omni_install_defaults',
 		];
 
 		foreach ( $actions as $action ) {
@@ -224,5 +230,94 @@ class Omni_Reports_Ajax {
 		}
 
 		Omni_Reports_Exporter::output_csv( $filename . '-' . $from . '-to-' . $to, (array) $rows );
+	}
+
+	/* ── Registry / Report Manager handlers ── */
+
+	public function handle_omni_get_report_registry() {
+		$this->verify_nonce();
+		wp_send_json_success( array_values( Omni_Reports_Registry::get_all() ) );
+	}
+
+	public function handle_omni_save_report_meta() {
+		$this->verify_nonce();
+
+		$raw = isset( $_POST['report'] ) ? wp_unslash( $_POST['report'] ) : '{}';
+		$data = json_decode( $raw, true );
+		if ( ! is_array( $data ) || empty( $data['name'] ) ) {
+			wp_send_json_error( [ 'message' => 'Invalid report data.' ] );
+		}
+
+		$id = ! empty( $data['id'] ) ? sanitize_key( $data['id'] ) : 'rpt_' . uniqid();
+
+		$report = [
+			'id'          => $id,
+			'name'        => sanitize_text_field( $data['name'] ),
+			'slug'        => sanitize_title( $data['slug'] ?? $data['name'] ),
+			'category'    => sanitize_key( $data['category'] ?? 'other' ),
+			'version'     => sanitize_text_field( $data['version'] ?? '1.0' ),
+			'icon'        => sanitize_text_field( $data['icon'] ?? 'dashicons-chart-bar' ),
+			'color'       => sanitize_key( $data['color'] ?? 'teal' ),
+			'menu_order'  => absint( $data['menu_order'] ?? 99 ),
+			'visible'     => ! empty( $data['visible'] ),
+			'type'        => sanitize_key( $data['type'] ?? 'custom' ),
+			'required'    => ! empty( $data['required'] ),
+			'description' => sanitize_textarea_field( $data['description'] ?? '' ),
+			'csv_export'  => ! empty( $data['csv_export'] ),
+			'printable'   => ! empty( $data['printable'] ),
+			'page_slug'   => sanitize_key( $data['page_slug'] ?? '' ),
+		];
+
+		Omni_Reports_Registry::save( $report );
+		wp_send_json_success( $report );
+	}
+
+	public function handle_omni_delete_report_meta() {
+		$this->verify_nonce();
+		$id = isset( $_POST['id'] ) ? sanitize_key( wp_unslash( $_POST['id'] ) ) : '';
+		if ( ! $id ) {
+			wp_send_json_error( [ 'message' => 'Missing report ID.' ] );
+		}
+		Omni_Reports_Registry::delete( $id );
+		wp_send_json_success();
+	}
+
+	public function handle_omni_reorder_reports() {
+		$this->verify_nonce();
+
+		$raw    = isset( $_POST['order'] ) ? wp_unslash( $_POST['order'] ) : '[]';
+		$order  = json_decode( $raw, true );
+		if ( ! is_array( $order ) ) {
+			wp_send_json_error( [ 'message' => 'Invalid order data.' ] );
+		}
+
+		$reports = Omni_Reports_Registry::get_all();
+		$index   = [];
+		foreach ( $reports as $r ) {
+			$index[ $r['id'] ] = $r;
+		}
+
+		$new_reports = [];
+		foreach ( $order as $i => $id ) {
+			$id = sanitize_key( $id );
+			if ( isset( $index[ $id ] ) ) {
+				$index[ $id ]['menu_order'] = ( $i + 1 ) * 10;
+				$new_reports[] = $index[ $id ];
+				unset( $index[ $id ] );
+			}
+		}
+		// Append any reports not in the order list.
+		foreach ( $index as $r ) {
+			$new_reports[] = $r;
+		}
+
+		update_option( Omni_Reports_Registry::OPTION, $new_reports );
+		wp_send_json_success();
+	}
+
+	public function handle_omni_install_defaults() {
+		$this->verify_nonce();
+		Omni_Reports_Registry::install_defaults();
+		wp_send_json_success( array_values( Omni_Reports_Registry::get_all() ) );
 	}
 }
