@@ -964,6 +964,63 @@ class Omni_Reports_Data_Store {
 				: 0;
 		}
 
+		// Items sold for current period.
+		$items_sql = $this->wpdb->prepare(
+			"SELECT SUM(num_items_sold) AS items_sold FROM {$this->wpdb->prefix}wc_order_stats
+			 WHERE status NOT IN ({$this->excluded_in()}) AND date_created BETWEEN %s AND %s",
+			$from, $to
+		);
+		$items_row = $this->wpdb->get_row( $items_sql );
+		if ( $summary ) {
+			$summary->items_sold = $items_row ? (int) $items_row->items_sold : 0;
+		}
+
+		// Items sold for comparison period.
+		$comp_items_sql = $this->wpdb->prepare(
+			"SELECT SUM(num_items_sold) AS items_sold FROM {$this->wpdb->prefix}wc_order_stats
+			 WHERE status NOT IN ({$this->excluded_in()}) AND date_created BETWEEN %s AND %s",
+			$comp_from, $comp_to
+		);
+		$comp_items_row = $this->wpdb->get_row( $comp_items_sql );
+		if ( $comp_summary ) {
+			$comp_summary->items_sold = $comp_items_row ? (int) $comp_items_row->items_sold : 0;
+		}
+
+		// Weekly aggregates (last 7 days from current period end).
+		$week_from = gmdate( 'Y-m-d', strtotime( $to ) - 6 * 86400 );
+		$week_sql  = $this->wpdb->prepare(
+			"SELECT SUM(net_total) AS weekly_net, SUM(total_sales) AS weekly_gross,
+			        COUNT(*) AS weekly_orders, SUM(num_items_sold) AS weekly_items
+			 FROM {$this->wpdb->prefix}wc_order_stats
+			 WHERE status NOT IN ({$this->excluded_in()}) AND date_created BETWEEN %s AND %s",
+			$week_from . ' 00:00:00', $to
+		);
+		$week_row = $this->wpdb->get_row( $week_sql );
+
+		$prior_week_to   = gmdate( 'Y-m-d', strtotime( $week_from ) - 86400 );
+		$prior_week_from = gmdate( 'Y-m-d', strtotime( $prior_week_to ) - 6 * 86400 );
+		$prior_week_sql  = $this->wpdb->prepare(
+			"SELECT SUM(net_total) AS weekly_net, SUM(total_sales) AS weekly_gross,
+			        COUNT(*) AS weekly_orders, SUM(num_items_sold) AS weekly_items
+			 FROM {$this->wpdb->prefix}wc_order_stats
+			 WHERE status NOT IN ({$this->excluded_in()}) AND date_created BETWEEN %s AND %s",
+			$prior_week_from . ' 00:00:00', $prior_week_to . ' 23:59:59'
+		);
+		$prior_week_row = $this->wpdb->get_row( $prior_week_sql );
+
+		$weekly_summary = [
+			'weekly_net'    => $week_row ? round( (float) $week_row->weekly_net, 2 )    : 0,
+			'weekly_gross'  => $week_row ? round( (float) $week_row->weekly_gross, 2 )  : 0,
+			'weekly_orders' => $week_row ? (int) $week_row->weekly_orders               : 0,
+			'weekly_items'  => $week_row ? (int) $week_row->weekly_items                : 0,
+		];
+		$comp_weekly_summary = [
+			'weekly_net'    => $prior_week_row ? round( (float) $prior_week_row->weekly_net, 2 )    : 0,
+			'weekly_gross'  => $prior_week_row ? round( (float) $prior_week_row->weekly_gross, 2 )  : 0,
+			'weekly_orders' => $prior_week_row ? (int) $prior_week_row->weekly_orders               : 0,
+			'weekly_items'  => $prior_week_row ? (int) $prior_week_row->weekly_items                : 0,
+		];
+
 		// Gross profit for summary (revenue minus product costs).
 		$product_costs = get_option( 'omni_product_costs', [] );
 		$pl = $this->wpdb->prefix . 'wc_order_product_lookup';
@@ -1068,6 +1125,8 @@ class Omni_Reports_Data_Store {
 			'comp_summary'           => $comp_summary,
 			'revenue_chart'          => $revenue_chart,
 			'weekly'                 => $weekly,
+			'weekly_summary'         => $weekly_summary,
+			'comp_weekly_summary'    => $comp_weekly_summary,
 			'top_products'           => $top_products,
 			'top_customers'          => $top_customers,
 			'order_status_breakdown' => $order_status_breakdown,
