@@ -218,6 +218,23 @@ class Omni_Reports_Registry {
 				'csv_export'  => false,
 				'printable'   => false,
 			],
+			[
+				'id'          => 'stock-tracker',
+				'name'        => 'Stock Tracker',
+				'slug'        => 'stock-tracker',
+				'category'    => 'other',
+				'version'     => '1.0',
+				'icon'        => 'dashicons-archive',
+				'color'       => 'blue',
+				'menu_order'  => 110,
+				'visible'     => true,
+				'type'        => 'standard',
+				'required'    => false,
+				'description' => 'Live inventory levels, stock value, and reorder alerts.',
+				'page_slug'   => 'omni-reports-stock',
+				'csv_export'  => true,
+				'printable'   => true,
+			],
 		];
 	}
 

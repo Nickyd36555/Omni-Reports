@@ -47,6 +47,15 @@ class Omni_Reports_Ajax {
 			'omni_delete_report_meta',
 			'omni_reorder_reports',
 			'omni_install_defaults',
+			// Dashboard Home
+			'omni_get_dashboard_home',
+			// Stock Tracker
+			'omni_get_stock_report',
+			'omni_save_reorder_point',
+			'omni_export_stock_csv',
+			// Builder layout
+			'omni_save_builder_report',
+			'omni_load_builder_report',
 		];
 
 		foreach ( $actions as $action ) {
@@ -440,5 +449,100 @@ class Omni_Reports_Ajax {
 		$this->verify_nonce();
 		Omni_Reports_Registry::install_defaults();
 		wp_send_json_success( array_values( Omni_Reports_Registry::get_all() ) );
+	}
+
+	/* ── Dashboard Home ── */
+
+	public function handle_omni_get_dashboard_home() {
+		$this->verify_nonce();
+		[ $from, $to ] = $this->dates();
+		$data = $this->ds->get_dashboard_home( $from, $to );
+		wp_send_json_success( $data );
+	}
+
+	/* ── Stock Tracker ── */
+
+	public function handle_omni_get_stock_report() {
+		$this->verify_nonce();
+		$products = Omni_Reports_Data_Store::get_stock_report();
+		wp_send_json_success( array_values( $products ) );
+	}
+
+	public function handle_omni_save_reorder_point() {
+		$this->verify_nonce();
+		$product_id    = absint( $_POST['product_id'] ?? 0 );
+		$reorder_point = absint( $_POST['reorder_point'] ?? 5 );
+		if ( ! $product_id ) {
+			wp_send_json_error( [ 'message' => 'Invalid product ID.' ] );
+		}
+		$points               = get_option( 'omni_reorder_points', [] );
+		$points[ $product_id ] = $reorder_point;
+		update_option( 'omni_reorder_points', $points );
+		wp_send_json_success( [ 'product_id' => $product_id, 'reorder_point' => $reorder_point ] );
+	}
+
+	public function handle_omni_export_stock_csv() {
+		$this->verify_nonce();
+		$products = Omni_Reports_Data_Store::get_stock_report();
+		$rows     = [];
+		foreach ( $products as $p ) {
+			$rows[] = [
+				'name'          => $p->name,
+				'sku'           => $p->sku,
+				'stock_qty'     => $p->stock_qty,
+				'stock_status'  => $p->stock_status,
+				'stock_value'   => $p->stock_value,
+				'reorder_point' => $p->reorder_point,
+				'needs_reorder' => $p->needs_reorder ? 'Yes' : 'No',
+			];
+		}
+		Omni_Reports_Exporter::output_csv( 'omni-stock-tracker-' . gmdate( 'Y-m-d' ), $rows );
+	}
+
+	/* ── Drag-and-Drop Builder layout persistence ── */
+
+	public function handle_omni_save_builder_report() {
+		$this->verify_nonce();
+		$name   = sanitize_text_field( wp_unslash( $_POST['name'] ?? 'My Report' ) );
+		$layout = [];
+		if ( ! empty( $_POST['layout'] ) ) {
+			$layout = json_decode( wp_unslash( $_POST['layout'] ), true );
+			if ( ! is_array( $layout ) ) $layout = [];
+		}
+		$id = ! empty( $_POST['id'] ) ? sanitize_key( wp_unslash( $_POST['id'] ) ) : 'bldr_' . uniqid();
+
+		$report = [
+			'id'     => $id,
+			'name'   => $name,
+			'type'   => 'custom',
+			'layout' => $layout,
+		];
+		Omni_Reports_Registry::save( array_merge( $report, [
+			'slug'       => sanitize_title( $name ),
+			'category'   => 'other',
+			'version'    => '1.0',
+			'icon'       => 'dashicons-layout',
+			'color'      => 'teal',
+			'menu_order' => 200,
+			'visible'    => false,
+			'required'   => false,
+			'description'=> '',
+			'page_slug'  => '',
+			'csv_export' => false,
+			'printable'  => false,
+		] ) );
+		wp_send_json_success( $report );
+	}
+
+	public function handle_omni_load_builder_report() {
+		$this->verify_nonce();
+		$id      = sanitize_key( wp_unslash( $_POST['id'] ?? '' ) );
+		$reports = Omni_Reports_Registry::get_all();
+		foreach ( $reports as $r ) {
+			if ( $r['id'] === $id ) {
+				wp_send_json_success( $r );
+			}
+		}
+		wp_send_json_error( [ 'message' => 'Report not found.' ] );
 	}
 }

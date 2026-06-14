@@ -800,4 +800,238 @@ class Omni_Reports_Data_Store {
 			'over_time' => $over_time,
 		];
 	}
+
+	// -------------------------------------------------------------------------
+	// Dashboard Home (full dashboard with comparison)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Full dashboard home data: summary KPIs, comparison, charts, top lists.
+	 *
+	 * @param string $date_from
+	 * @param string $date_to
+	 * @return array
+	 */
+	public function get_dashboard_home( $date_from, $date_to ) {
+		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
+
+		// Calculate comparison period (same length, immediately prior).
+		$from_ts = strtotime( $from );
+		$to_ts   = strtotime( $to );
+		$diff    = $to_ts - $from_ts;
+		$comp_to   = gmdate( 'Y-m-d 23:59:59', $from_ts - 1 );
+		$comp_from = gmdate( 'Y-m-d', $from_ts - $diff - 86400 );
+
+		$summary      = $this->get_sales_overview( $from, $to );
+		$comp_summary = $this->get_sales_overview( $comp_from, $comp_to );
+
+		// New customers for current and prior periods.
+		$os = $this->wpdb->prefix . 'wc_order_stats';
+		$new_cust_sql = $this->wpdb->prepare(
+			"SELECT SUM(CASE WHEN returning_customer = 0 THEN 1 ELSE 0 END) AS new_customers
+			FROM {$os}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s",
+			$from, $to
+		);
+		$new_cust_row = $this->wpdb->get_row( $new_cust_sql );
+		if ( $summary ) {
+			$summary->new_customers = $new_cust_row ? (int) $new_cust_row->new_customers : 0;
+		}
+
+		$comp_cust_sql = $this->wpdb->prepare(
+			"SELECT SUM(CASE WHEN returning_customer = 0 THEN 1 ELSE 0 END) AS new_customers
+			FROM {$os}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s",
+			$comp_from, $comp_to
+		);
+		$comp_cust_row = $this->wpdb->get_row( $comp_cust_sql );
+		if ( $comp_summary ) {
+			$comp_summary->new_customers = $comp_cust_row ? (int) $comp_cust_row->new_customers : 0;
+		}
+
+		// Refund rate for current period.
+		$refund_sql = $this->wpdb->prepare(
+			"SELECT COUNT(*) AS total, SUM(CASE WHEN total_refunds > 0 THEN 1 ELSE 0 END) AS refunded
+			FROM {$os}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s",
+			$from, $to
+		);
+		$refund_row = $this->wpdb->get_row( $refund_sql );
+		if ( $summary ) {
+			$total_orders           = $refund_row ? (int) $refund_row->total : 0;
+			$summary->refund_rate   = $total_orders > 0
+				? round( ( (int) $refund_row->refunded / $total_orders ) * 100, 2 )
+				: 0;
+		}
+
+		$comp_refund_sql = $this->wpdb->prepare(
+			"SELECT COUNT(*) AS total, SUM(CASE WHEN total_refunds > 0 THEN 1 ELSE 0 END) AS refunded
+			FROM {$os}
+			WHERE status NOT IN ({$this->excluded_in()})
+			  AND date_created BETWEEN %s AND %s",
+			$comp_from, $comp_to
+		);
+		$comp_refund_row = $this->wpdb->get_row( $comp_refund_sql );
+		if ( $comp_summary ) {
+			$comp_total                 = $comp_refund_row ? (int) $comp_refund_row->total : 0;
+			$comp_summary->refund_rate  = $comp_total > 0
+				? round( ( (int) $comp_refund_row->refunded / $comp_total ) * 100, 2 )
+				: 0;
+		}
+
+		// Gross profit for summary (revenue minus product costs).
+		$product_costs = get_option( 'omni_product_costs', [] );
+		$pl = $this->wpdb->prefix . 'wc_order_product_lookup';
+		$cost_sql = $this->wpdb->prepare(
+			"SELECT pl.product_id, SUM(pl.product_qty) AS qty
+			FROM {$pl} pl
+			INNER JOIN {$os} os ON pl.order_id = os.order_id
+			WHERE os.status NOT IN ({$this->excluded_in()})
+			  AND os.date_created BETWEEN %s AND %s
+			GROUP BY pl.product_id",
+			$from, $to
+		);
+		$cost_rows  = $this->wpdb->get_results( $cost_sql );
+		$total_cost = 0;
+		foreach ( $cost_rows as $cr ) {
+			$cpu         = isset( $product_costs[ $cr->product_id ] ) ? floatval( $product_costs[ $cr->product_id ] ) : 0;
+			$total_cost += $cpu * floatval( $cr->qty );
+		}
+		if ( $summary ) {
+			$summary->gross_profit = round( floatval( $summary->revenue ?? 0 ) - $total_cost, 2 );
+		}
+
+		// Comparison gross profit.
+		$comp_cost_sql = $this->wpdb->prepare(
+			"SELECT pl.product_id, SUM(pl.product_qty) AS qty
+			FROM {$pl} pl
+			INNER JOIN {$os} os ON pl.order_id = os.order_id
+			WHERE os.status NOT IN ({$this->excluded_in()})
+			  AND os.date_created BETWEEN %s AND %s
+			GROUP BY pl.product_id",
+			$comp_from, $comp_to
+		);
+		$comp_cost_rows  = $this->wpdb->get_results( $comp_cost_sql );
+		$comp_total_cost = 0;
+		foreach ( $comp_cost_rows as $cr ) {
+			$cpu              = isset( $product_costs[ $cr->product_id ] ) ? floatval( $product_costs[ $cr->product_id ] ) : 0;
+			$comp_total_cost += $cpu * floatval( $cr->qty );
+		}
+		if ( $comp_summary ) {
+			$comp_summary->gross_profit = round( floatval( $comp_summary->revenue ?? 0 ) - $comp_total_cost, 2 );
+		}
+
+		// Revenue chart (daily, current + prior).
+		$current_rows = $this->get_sales_over_time( $from, $to, 'day' );
+		$prior_rows   = $this->get_sales_over_time( $comp_from, $comp_to, 'day' );
+
+		$current_labels  = array_column( $current_rows, 'report_date' );
+		$current_revenue = array_map( fn( $r ) => (float) $r->revenue, $current_rows );
+		$current_profit  = array_map( fn( $r ) => round( (float) $r->net_revenue, 2 ), $current_rows );
+		$prior_revenue   = array_map( fn( $r ) => (float) $r->revenue, $prior_rows );
+
+		$revenue_chart = [
+			'labels'   => $current_labels,
+			'datasets' => [
+				[
+					'label' => 'Revenue',
+					'data'  => $current_revenue,
+					'type'  => 'bar',
+				],
+				[
+					'label' => 'Net Profit',
+					'data'  => $current_profit,
+					'type'  => 'line',
+				],
+				[
+					'label'  => 'Prior Revenue',
+					'data'   => $prior_revenue,
+					'type'   => 'line',
+					'dashed' => true,
+				],
+			],
+		];
+
+		// Weekly (last 7 days).
+		$week_from = gmdate( 'Y-m-d', strtotime( '-6 days' ) );
+		$week_to   = gmdate( 'Y-m-d' );
+		$weekly_rows = $this->get_sales_over_time( $week_from, $week_to, 'day' );
+		$weekly = array_map( fn( $r ) => [
+			'date'    => $r->report_date,
+			'revenue' => (float) $r->revenue,
+			'orders'  => (int) $r->orders,
+		], $weekly_rows );
+
+		// Top products.
+		$top_products = $this->get_products_report( $from, $to, 10 );
+
+		// Top customers.
+		$cust_data     = $this->get_customers_report( $from, $to );
+		$top_customers = array_slice( $cust_data['top_customers'], 0, 10 );
+
+		// Order status breakdown.
+		$orders_data = $this->get_orders_report( $from, $to );
+		$order_status_breakdown = $orders_data['by_status'];
+
+		// Top category.
+		$cats      = $this->get_categories_report( $from, $to );
+		$top_cat   = ! empty( $cats ) ? $cats[0]->category_name : '';
+		$top_prod  = ! empty( $top_products ) ? $top_products[0]->product_name : '';
+
+		return [
+			'summary'                => $summary,
+			'comp_summary'           => $comp_summary,
+			'revenue_chart'          => $revenue_chart,
+			'weekly'                 => $weekly,
+			'top_products'           => $top_products,
+			'top_customers'          => $top_customers,
+			'order_status_breakdown' => $order_status_breakdown,
+			'quick_stats'            => [
+				'top_category' => $top_cat,
+				'top_product'  => $top_prod,
+			],
+			'analytics_tables_exist' => $this->analytics_tables_exist(),
+		];
+	}
+
+	// -------------------------------------------------------------------------
+	// Stock Tracker
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Get stock report data for all published products and variations.
+	 *
+	 * @return array
+	 */
+	public static function get_stock_report() {
+		global $wpdb;
+		$products = $wpdb->get_results( "
+			SELECT p.ID, p.post_title as name,
+			       MAX(CASE WHEN pm.meta_key='_sku' THEN pm.meta_value END) as sku,
+			       MAX(CASE WHEN pm.meta_key='_stock' THEN CAST(pm.meta_value AS DECIMAL(10,2)) END) as stock_qty,
+			       MAX(CASE WHEN pm.meta_key='_stock_status' THEN pm.meta_value END) as stock_status,
+			       MAX(CASE WHEN pm.meta_key='_manage_stock' THEN pm.meta_value END) as manage_stock,
+			       MAX(CASE WHEN pm.meta_key='_regular_price' THEN CAST(pm.meta_value AS DECIMAL(10,2)) END) as price,
+			       MAX(CASE WHEN pm.meta_key='_sale_price' THEN CAST(pm.meta_value AS DECIMAL(10,2)) END) as sale_price
+			FROM {$wpdb->posts} p
+			JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+			WHERE p.post_type IN ('product','product_variation')
+			  AND p.post_status = 'publish'
+			  AND pm.meta_key IN ('_sku','_stock','_stock_status','_manage_stock','_regular_price','_sale_price')
+			GROUP BY p.ID
+			ORDER BY p.post_title
+		" );
+		$reorder_points = get_option( 'omni_reorder_points', [] );
+		foreach ( $products as &$p ) {
+			$p->reorder_point  = isset( $reorder_points[ $p->ID ] ) ? (int) $reorder_points[ $p->ID ] : 5;
+			$p->needs_reorder  = ( $p->stock_status === 'outofstock' || (float) $p->stock_qty <= $p->reorder_point );
+			$effective_price   = ! empty( $p->sale_price ) ? $p->sale_price : $p->price;
+			$p->stock_value    = round( (float) $p->stock_qty * (float) $effective_price, 2 );
+		}
+		unset( $p );
+		return $products;
+	}
 }
