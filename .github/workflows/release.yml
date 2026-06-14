@@ -1,0 +1,48 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get plugin version
+        id: version
+        run: |
+          VERSION=$(grep -m1 "Version:" omni-reports/omni-reports.php | awk '{print $NF}' | tr -d '[:space:]')
+          echo "version=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "Plugin version: v${VERSION}"
+
+      - name: Check if release exists
+        id: check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.version.outputs.version }}")
+          echo "status=${STATUS}" >> $GITHUB_OUTPUT
+
+      - name: Create zip
+        if: steps.check.outputs.status == '404'
+        run: |
+          zip -r omni-reports.zip omni-reports/ -x "*.git*"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.status == '404'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Omni Reports ${{ steps.version.outputs.version }}
+          body: |
+            Omni Reports ${{ steps.version.outputs.version }}
+
+            Install or update via your WordPress admin panel — go to Plugins → Omni Reports → Update.
+          files: omni-reports.zip
+          generate_release_notes: false
