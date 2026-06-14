@@ -490,8 +490,8 @@ class Omni_Reports_Data_Store {
 		if ( $this->analytics_tables_exist() ) {
 			$search_clause = '';
 			if ( $search ) {
-				$like          = '%' . $this->wpdb->esc_like( $search ) . '%';
-				$search_clause = $this->wpdb->prepare( ' AND cl.coupon_code LIKE %s', $like );
+				$like          = '%' . $this->wpdb->esc_like( strtolower( $search ) ) . '%';
+				$search_clause = $this->wpdb->prepare( ' AND LOWER(cl.coupon_code) LIKE %s', $like );
 			}
 
 			$sql = $this->wpdb->prepare(
@@ -500,7 +500,7 @@ class Omni_Reports_Data_Store {
 					cl.coupon_code,
 					COUNT(DISTINCT cl.order_id)  AS usage_count,
 					SUM(cl.discount_amount)      AS discount_amount,
-					SUM(os.net_total)            AS revenue
+					SUM(os.total_sales)          AS revenue
 				FROM {$cl} cl
 				INNER JOIN {$os} os ON cl.order_id = os.order_id
 				WHERE os.status NOT IN ({$this->excluded_in()})
