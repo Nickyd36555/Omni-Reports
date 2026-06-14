@@ -42,7 +42,7 @@ defined( 'ABSPATH' ) || exit;
 				<span class="omni-period-badge" id="omni-home-period-badge">Last 30 Days</span>
 			</div>
 			<div class="omni-home-chart-container">
-				<canvas id="omni-home-main-chart" height="280"></canvas>
+				<canvas id="omni-home-main-chart" height="220"></canvas>
 				<div class="omni-skeleton omni-skeleton-chart" id="omni-home-chart-skeleton"></div>
 			</div>
 		</div>
@@ -121,7 +121,7 @@ defined( 'ABSPATH' ) || exit;
 		<div class="omni-card omni-home-bottom-card">
 			<div class="omni-card-header"><span class="omni-card-title">Order Status &amp; Top Customers</span></div>
 			<div class="omni-home-status-chart-wrap">
-				<canvas id="omni-home-status-chart" height="160"></canvas>
+				<canvas id="omni-home-status-chart" height="130"></canvas>
 				<div class="omni-skeleton omni-skeleton-chart omni-skeleton-short" id="omni-status-chart-skeleton"></div>
 			</div>
 			<div id="omni-top-customers-table" class="omni-home-mini-table">
