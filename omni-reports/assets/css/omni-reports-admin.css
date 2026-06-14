@@ -1121,7 +1121,8 @@
 }
 
 .omni-home-chart-wrap { padding: 0 0 12px; }
-.omni-home-chart-container { position: relative; padding: 0 12px 6px; min-height: 220px; }
+.omni-home-chart-container { position: relative; padding: 0 12px 6px; height: 220px; max-height: 220px; overflow: hidden; }
+.omni-home-chart-container canvas { max-height: 220px !important; }
 
 .omni-home-sidebar { display: flex; flex-direction: column; gap: 12px; }
 

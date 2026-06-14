@@ -17,8 +17,14 @@ class Omni_Reports_Data_Store {
 	/** @var wpdb */
 	private $wpdb;
 
-	/** Non-revenue statuses */
-	private $excluded_statuses = [ 'wc-pending', 'wc-cancelled', 'wc-failed', 'wc-checkout-draft' ];
+	/**
+	 * Non-revenue statuses — wc_order_stats stores without the wc- prefix.
+	 * We list both forms so the exclusion works regardless of WC version/storage.
+	 */
+	private $excluded_statuses = [
+		'pending', 'cancelled', 'failed', 'checkout-draft',
+		'wc-pending', 'wc-cancelled', 'wc-failed', 'wc-checkout-draft',
+	];
 
 	public function __construct() {
 		global $wpdb;
@@ -103,7 +109,7 @@ class Omni_Reports_Data_Store {
 				SUM(total_sales)        AS revenue,
 				SUM(net_total)          AS net_revenue,
 				COUNT(*)                AS orders,
-				COALESCE(AVG(total_sales),0) AS avg_order_value,
+				COALESCE(AVG(NULLIF(total_sales,0)),0) AS avg_order_value,
 				SUM(total_refunds)      AS refunds,
 				SUM(tax_total)          AS tax,
 				SUM(shipping_total)     AS shipping
@@ -115,7 +121,38 @@ class Omni_Reports_Data_Store {
 		);
 
 		$row = $this->wpdb->get_row( $sql );
+
+		// Fallback: if analytics table is empty or has zero revenue, query posts/postmeta directly.
+		if ( ! $row || ( floatval( $row->revenue ) == 0 && intval( $row->orders ) == 0 ) ) {
+			$row = $this->get_sales_overview_fallback( $from, $to );
+		}
+
 		return $row ?? new stdClass();
+	}
+
+	private function get_sales_overview_fallback( $from, $to ) {
+		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold', 'completed', 'processing', 'on-hold' ];
+		$in = $this->in_list( $revenue_statuses );
+		$sql = $this->wpdb->prepare(
+			"SELECT
+				SUM(CAST(pm_total.meta_value AS DECIMAL(12,2)))      AS revenue,
+				SUM(CAST(pm_total.meta_value AS DECIMAL(12,2)))      AS net_revenue,
+				COUNT(DISTINCT p.ID)                                  AS orders,
+				AVG(CAST(pm_total.meta_value AS DECIMAL(12,2)))      AS avg_order_value,
+				SUM(CAST(pm_refund.meta_value AS DECIMAL(12,2)))     AS refunds,
+				SUM(CAST(pm_tax.meta_value AS DECIMAL(12,2)))        AS tax,
+				SUM(CAST(pm_ship.meta_value AS DECIMAL(12,2)))       AS shipping
+			FROM {$this->wpdb->posts} p
+			LEFT JOIN {$this->wpdb->postmeta} pm_total  ON p.ID = pm_total.post_id  AND pm_total.meta_key  = '_order_total'
+			LEFT JOIN {$this->wpdb->postmeta} pm_refund ON p.ID = pm_refund.post_id AND pm_refund.meta_key = '_order_total_refunded'
+			LEFT JOIN {$this->wpdb->postmeta} pm_tax    ON p.ID = pm_tax.post_id    AND pm_tax.meta_key    = '_order_tax'
+			LEFT JOIN {$this->wpdb->postmeta} pm_ship   ON p.ID = pm_ship.post_id   AND pm_ship.meta_key   = '_order_shipping'
+			WHERE p.post_type = 'shop_order'
+			  AND p.post_status IN ({$in})
+			  AND p.post_date BETWEEN %s AND %s",
+			$from, $to
+		);
+		return $this->wpdb->get_row( $sql ) ?? new stdClass();
 	}
 
 	/**

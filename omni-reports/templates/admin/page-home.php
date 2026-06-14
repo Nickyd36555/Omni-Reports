@@ -170,6 +170,7 @@ defined( 'ABSPATH' ) || exit;
 		var lineDs  = ds.find(function(d){ return d.type === 'line' && !d.dashed; }) || {};
 		var priorDs = ds.find(function(d){ return d.dashed; }) || {};
 
+		ctx.canvas.style.maxHeight = '220px';
 		mainChart = new Chart(ctx, {
 			type: 'bar',
 			data: {
@@ -211,11 +212,12 @@ defined( 'ABSPATH' ) || exit;
 			},
 			options: {
 				responsive: true,
+				maintainAspectRatio: false,
 				interaction: { mode: 'index', intersect: false },
-				plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+				plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } },
 				scales: {
-					y: { beginAtZero: true, ticks: { font: { size: 11 } }, grid: { color: '#E2E8F0' } },
-					x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } }
+					y: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: '#E2E8F0' } },
+					x: { ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } }
 				}
 			}
 		});
