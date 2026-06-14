@@ -1501,3 +1501,19 @@
 }
 .omni-weekly-stat-val { font-size: 14px; font-weight: 700; color: var(--omni-text); }
 .omni-weekly-stat-label { font-size: 10px; color: var(--omni-muted); flex: 1; }
+
+/* ── Sidebar group headers ───────────────────────────────── */
+#adminmenu a[href*="omni-reports-sales-group"],
+#adminmenu a[href*="omni-reports-finance-group"],
+#adminmenu a[href*="omni-reports-inventory-group"],
+#adminmenu a[href*="omni-reports-tools-group"] {
+	font-size: 10px !important;
+	font-weight: 700 !important;
+	text-transform: uppercase !important;
+	letter-spacing: .08em !important;
+	color: #a0aec0 !important;
+	pointer-events: none !important;
+	padding: 8px 10px 4px !important;
+	opacity: 1 !important;
+	cursor: default !important;
+}

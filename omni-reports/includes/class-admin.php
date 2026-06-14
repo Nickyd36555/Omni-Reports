@@ -18,7 +18,6 @@ class Omni_Reports_Admin {
 	public function register_menus() {
 		$cap = 'manage_woocommerce';
 
-		// Single top-level page — all navigation handled inside the plugin.
 		add_menu_page(
 			__( 'Omni Reports', 'omni-reports' ),
 			__( 'Omni Reports', 'omni-reports' ),
@@ -29,28 +28,35 @@ class Omni_Reports_Admin {
 			56
 		);
 
-		// Hidden subpages for standard reports (accessible via URL, not sidebar).
-		$subpages = [
-			'omni-reports-sales'      => [ $this, 'render_page' ],
-			'omni-reports-revenue'    => [ $this, 'render_page' ],
-			'omni-reports-products'   => [ $this, 'render_page' ],
-			'omni-reports-categories' => [ $this, 'render_page' ],
-			'omni-reports-customers'  => [ $this, 'render_page' ],
-			'omni-reports-orders'     => [ $this, 'render_page' ],
-			'omni-reports-coupons'    => [ $this, 'render_page' ],
-			'omni-reports-tax'        => [ $this, 'render_page' ],
-			'omni-reports-shipping'   => [ $this, 'render_page' ],
-			'omni-reports-builder'    => [ $this, 'render_page' ],
-			'omni-reports-profit'     => [ $this, 'render_page' ],
-			'omni-reports-refunds'    => [ $this, 'render_page' ],
-			'omni-reports-costs'      => [ $this, 'render_page' ],
-			'omni-reports-reports'    => [ $this, 'render_page' ],
-			'omni-reports-stock'      => [ $this, 'render_page' ],
-		];
+		// Dashboard (replaces default "Omni Reports" duplicate)
+		add_submenu_page( 'omni-reports', __( 'Dashboard', 'omni-reports' ), __( 'Dashboard', 'omni-reports' ), $cap, 'omni-reports', [ $this, 'render_page' ] );
 
-		foreach ( $subpages as $slug => $cb ) {
-			add_submenu_page( null, '', '', $cap, $slug, $cb );
-		}
+		// Sales Reports group
+		add_submenu_page( 'omni-reports', '', '— Sales Reports', $cap, 'omni-reports-sales-group', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Sales Overview', 'omni-reports' ), __( 'Sales Overview', 'omni-reports' ), $cap, 'omni-reports-sales', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Revenue Trends', 'omni-reports' ), __( 'Revenue Trends', 'omni-reports' ), $cap, 'omni-reports-revenue', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Products', 'omni-reports' ), __( 'Products', 'omni-reports' ), $cap, 'omni-reports-products', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Categories', 'omni-reports' ), __( 'Categories', 'omni-reports' ), $cap, 'omni-reports-categories', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Customers', 'omni-reports' ), __( 'Customers', 'omni-reports' ), $cap, 'omni-reports-customers', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Orders', 'omni-reports' ), __( 'Orders', 'omni-reports' ), $cap, 'omni-reports-orders', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Coupons', 'omni-reports' ), __( 'Coupons', 'omni-reports' ), $cap, 'omni-reports-coupons', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Tax', 'omni-reports' ), __( 'Tax', 'omni-reports' ), $cap, 'omni-reports-tax', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Shipping', 'omni-reports' ), __( 'Shipping', 'omni-reports' ), $cap, 'omni-reports-shipping', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Refunds', 'omni-reports' ), __( 'Refunds', 'omni-reports' ), $cap, 'omni-reports-refunds', [ $this, 'render_page' ] );
+
+		// Finance group
+		add_submenu_page( 'omni-reports', '', '— Finance', $cap, 'omni-reports-finance-group', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Profit', 'omni-reports' ), __( 'Profit', 'omni-reports' ), $cap, 'omni-reports-profit', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Cost Manager', 'omni-reports' ), __( 'Cost Manager', 'omni-reports' ), $cap, 'omni-reports-costs', [ $this, 'render_page' ] );
+
+		// Inventory group
+		add_submenu_page( 'omni-reports', '', '— Inventory', $cap, 'omni-reports-inventory-group', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Stock Tracker', 'omni-reports' ), __( 'Stock Tracker', 'omni-reports' ), $cap, 'omni-reports-stock', [ $this, 'render_page' ] );
+
+		// Tools group
+		add_submenu_page( 'omni-reports', '', '— Tools', $cap, 'omni-reports-tools-group', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Report Builder', 'omni-reports' ), __( 'Report Builder', 'omni-reports' ), $cap, 'omni-reports-builder', [ $this, 'render_page' ] );
+		add_submenu_page( 'omni-reports', __( 'Report Manager', 'omni-reports' ), __( 'Report Manager', 'omni-reports' ), $cap, 'omni-reports-reports', [ $this, 'render_page' ] );
 	}
 
 	public function enqueue_assets( $hook ) {
@@ -166,22 +172,26 @@ class Omni_Reports_Admin {
 		echo '<link rel="stylesheet" href="' . esc_url( includes_url( 'css/dashicons.min.css' ) ) . '" />';
 
 		$map = [
-			'omni-reports'            => 'page-home',
-			'omni-reports-reports'    => 'page-dashboard',
-			'omni-reports-sales'      => 'page-sales',
-			'omni-reports-revenue'    => 'page-revenue',
-			'omni-reports-products'   => 'page-products',
-			'omni-reports-categories' => 'page-categories',
-			'omni-reports-customers'  => 'page-customers',
-			'omni-reports-orders'     => 'page-orders',
-			'omni-reports-coupons'    => 'page-coupons',
-			'omni-reports-tax'        => 'page-tax',
-			'omni-reports-shipping'   => 'page-shipping',
-			'omni-reports-builder'    => 'page-builder',
-			'omni-reports-profit'     => 'page-profit',
-			'omni-reports-refunds'    => 'page-refunds',
-			'omni-reports-costs'      => 'page-costs',
-			'omni-reports-stock'      => 'page-stock',
+			'omni-reports'                 => 'page-home',
+			'omni-reports-reports'         => 'page-dashboard',
+			'omni-reports-sales'           => 'page-sales',
+			'omni-reports-revenue'         => 'page-revenue',
+			'omni-reports-products'        => 'page-products',
+			'omni-reports-categories'      => 'page-categories',
+			'omni-reports-customers'       => 'page-customers',
+			'omni-reports-orders'          => 'page-orders',
+			'omni-reports-coupons'         => 'page-coupons',
+			'omni-reports-tax'             => 'page-tax',
+			'omni-reports-shipping'        => 'page-shipping',
+			'omni-reports-builder'         => 'page-builder',
+			'omni-reports-profit'          => 'page-profit',
+			'omni-reports-refunds'         => 'page-refunds',
+			'omni-reports-costs'           => 'page-costs',
+			'omni-reports-stock'           => 'page-stock',
+			'omni-reports-sales-group'     => 'page-home',
+			'omni-reports-finance-group'   => 'page-home',
+			'omni-reports-inventory-group' => 'page-home',
+			'omni-reports-tools-group'     => 'page-home',
 		];
 
 		$template = $map[ $page ] ?? 'page-dashboard';
