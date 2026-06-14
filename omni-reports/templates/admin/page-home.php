@@ -109,7 +109,7 @@ defined( 'ABSPATH' ) || exit;
 		<div class="omni-card omni-home-bottom-card">
 			<div class="omni-card-header"><span class="omni-card-title">Top Products by Revenue</span></div>
 			<div class="omni-home-donut-wrap">
-				<canvas id="omni-home-products-donut" width="200" height="200"></canvas>
+				<canvas id="omni-home-products-donut" width="150" height="150"></canvas>
 				<div class="omni-skeleton omni-skeleton-donut" id="omni-products-donut-skeleton"></div>
 			</div>
 			<div id="omni-top-products-table" class="omni-home-mini-table">
