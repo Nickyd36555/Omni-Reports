@@ -17,32 +17,39 @@ jobs:
       - name: Get plugin version
         id: version
         run: |
-          VERSION=$(grep -m1 "Version:" omni-reports/omni-reports.php | awk '{print $NF}' | tr -d '[:space:]')
-          echo "version=v${VERSION}" >> $GITHUB_OUTPUT
-          echo "Plugin version: v${VERSION}"
+          VERSION=$(grep -m1 "^\s*\* Version:" omni-reports/omni-reports.php | sed 's/.*Version:\s*//' | tr -d '[:space:]')
+          echo "Plugin version detected: ${VERSION}"
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "name=Omni Reports v${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Check if release exists
         id: check
         run: |
+          TAG="${{ steps.version.outputs.tag }}"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.version.outputs.version }}")
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG}")
           echo "status=${STATUS}" >> $GITHUB_OUTPUT
+          echo "Release check for ${TAG}: HTTP ${STATUS}"
 
-      - name: Create zip
+      - name: Build plugin zip
         if: steps.check.outputs.status == '404'
         run: |
-          zip -r omni-reports.zip omni-reports/ -x "*.git*"
+          zip -r omni-reports.zip omni-reports/ -x "*.git*" "*.DS_Store"
+          echo "Zip built: $(du -h omni-reports.zip | cut -f1)"
 
       - name: Create GitHub Release
         if: steps.check.outputs.status == '404'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: Omni Reports ${{ steps.version.outputs.version }}
-          body: |
-            Omni Reports ${{ steps.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          NAME="${{ steps.version.outputs.name }}"
+          gh release create "${TAG}" omni-reports.zip \
+            --title "${NAME}" \
+            --notes "## ${NAME}
 
-            Install or update via your WordPress admin panel — go to Plugins → Omni Reports → Update.
-          files: omni-reports.zip
-          generate_release_notes: false
+          Install or update: go to **WordPress Admin → Plugins → Omni Reports → Update Now**
+
+          The plugin zip is attached below." \
+            --repo "${{ github.repository }}"
