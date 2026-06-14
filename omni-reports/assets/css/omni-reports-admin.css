@@ -772,18 +772,22 @@
 	background: var(--omni-card);
 	border: 1px solid var(--omni-border);
 	border-radius: var(--omni-radius);
-	padding: 20px;
-	margin-bottom: 20px;
+	padding: 16px;
+	margin-bottom: 16px;
 	box-shadow: var(--omni-shadow);
 }
 
+.omni-chart-card canvas {
+	max-height: 240px !important;
+}
+
 .omni-chart-card h2 {
-	font-size: 15px;
+	font-size: 13px;
 	font-weight: 700;
-	margin: 0 0 16px;
+	margin: 0 0 12px;
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 10px;
 	color: var(--omni-text);
 }
 
