@@ -13,6 +13,8 @@
 		<label><?php esc_html_e( 'To', 'omni-reports' ); ?> <input type="date" id="omni-date-to" /></label>
 		<button class="omni-btn omni-btn-primary omni-btn-sm" id="omni-apply-dates"><?php esc_html_e( 'Apply', 'omni-reports' ); ?></button>
 	</div>
+	<input type="hidden" id="omni-comp-from" />
+	<input type="hidden" id="omni-comp-to" />
 	<div class="omni-export-bar">
 		<button class="omni-export-btn" id="omni-export-csv"><?php esc_html_e( 'Export CSV', 'omni-reports' ); ?></button>
 		<button class="omni-print-btn" onclick="window.print()"><?php esc_html_e( 'Print', 'omni-reports' ); ?></button>

@@ -54,6 +54,25 @@
 		dateCallbacks.push(cb);
 	};
 
+	// ── Column visibility ────────────────────────────────────────────────────
+
+	/**
+	 * Returns true if a column key is enabled for a given report slug.
+	 * Falls back to the default definitions if no saved columns exist.
+	 */
+	omniReports.colEnabled = function (slug, key) {
+		var saved = (omniReports.reportColumns || {})[slug];
+		if (saved && saved.length) {
+			return saved.indexOf(key) !== -1;
+		}
+		// Fall back to default definitions.
+		var defs = (omniReports.columnDefs || {})[slug] || [];
+		for (var i = 0; i < defs.length; i++) {
+			if (defs[i].key === key) return !! defs[i].on;
+		}
+		return true; // unknown column — show by default.
+	};
+
 	// ── Currency ─────────────────────────────────────────────────────────────
 
 	omniReports.formatCurrency = function (val) {
@@ -93,8 +112,9 @@
 			},
 			options: {
 				responsive: true,
+				maintainAspectRatio: true,
 				plugins: { legend: { display: false } },
-				scales: { y: { beginAtZero: true } }
+				scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } } }
 			}
 		});
 	};
@@ -115,12 +135,14 @@
 					label: label || valueKey,
 					data: slice.map(function (r) { return parseFloat(r[valueKey]) || 0; }),
 					backgroundColor: PALETTE[0],
+					borderRadius: 3,
 				}]
 			},
 			options: {
 				responsive: true,
+				maintainAspectRatio: true,
 				plugins: { legend: { display: false } },
-				scales: { y: { beginAtZero: true } }
+				scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } } }
 			}
 		});
 	};
@@ -143,7 +165,8 @@
 			},
 			options: {
 				responsive: true,
-				plugins: { legend: { position: 'right' } }
+				maintainAspectRatio: true,
+				plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } }
 			}
 		});
 	};

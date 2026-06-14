@@ -134,6 +134,10 @@ foreach ( $reports as $r ) {
 				<span class="omni-modal-tab-icon"><span class="dashicons dashicons-art" style="font-size:12px;width:12px;height:12px"></span></span>
 				<?php esc_html_e( 'Design', 'omni-reports' ); ?>
 			</div>
+			<div class="omni-modal-tab" data-tab="modify">
+				<span class="omni-modal-tab-icon"><span class="dashicons dashicons-editor-ul" style="font-size:12px;width:12px;height:12px"></span></span>
+				<?php esc_html_e( 'Modify', 'omni-reports' ); ?>
+			</div>
 			<div class="omni-modal-tab" data-tab="advanced">
 				<span class="omni-modal-tab-icon"><span class="dashicons dashicons-admin-settings" style="font-size:12px;width:12px;height:12px"></span></span>
 				<?php esc_html_e( 'Advanced', 'omni-reports' ); ?>
@@ -235,6 +239,16 @@ foreach ( $reports as $r ) {
 						<?php endforeach; ?>
 					</div>
 					<input type="hidden" id="rpt-color" value="teal">
+				</div>
+			</div>
+
+			<!-- Tab: Modify -->
+			<div class="omni-tab-panel" id="tab-modify">
+				<p style="font-size:12px;color:#718096;margin:0 0 14px">
+					<?php esc_html_e( 'Toggle the columns and metrics shown in this report. Changes apply immediately after saving.', 'omni-reports' ); ?>
+				</p>
+				<div id="omni-modify-columns">
+					<p style="color:#A0AEC0;font-size:13px"><?php esc_html_e( 'Select a report to see its available columns.', 'omni-reports' ); ?></p>
 				</div>
 			</div>
 

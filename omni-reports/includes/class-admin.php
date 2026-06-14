@@ -12,6 +12,7 @@ class Omni_Reports_Admin {
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menus' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'admin_notices', [ $this, 'reorder_notices' ] );
 	}
 
 	public function register_menus() {
@@ -40,6 +41,11 @@ class Omni_Reports_Admin {
 			'omni-reports-tax'        => [ $this, 'render_page' ],
 			'omni-reports-shipping'   => [ $this, 'render_page' ],
 			'omni-reports-builder'    => [ $this, 'render_page' ],
+			'omni-reports-profit'     => [ $this, 'render_page' ],
+			'omni-reports-refunds'    => [ $this, 'render_page' ],
+			'omni-reports-costs'      => [ $this, 'render_page' ],
+			'omni-reports-reports'    => [ $this, 'render_page' ],
+			'omni-reports-stock'      => [ $this, 'render_page' ],
 		];
 
 		foreach ( $subpages as $slug => $cb ) {
@@ -89,23 +95,61 @@ class Omni_Reports_Admin {
 		$current_page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : 'omni-reports';
 
 		wp_localize_script( 'omni-reports-admin', 'omniReports', [
-			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-			'nonce'       => wp_create_nonce( 'omni_reports_nonce' ),
-			'currency'    => get_woocommerce_currency_symbol(),
-			'currentPage' => $current_page,
-			'adminUrl'    => admin_url( 'admin.php' ),
-			'categories'  => Omni_Reports_Registry::categories(),
+			'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
+			'nonce'           => wp_create_nonce( 'omni_reports_nonce' ),
+			'currency'        => get_woocommerce_currency_symbol(),
+			'currentPage'     => $current_page,
+			'adminUrl'        => admin_url( 'admin.php' ),
+			'categories'      => Omni_Reports_Registry::categories(),
+			'columnDefs'      => Omni_Reports_Columns::definitions(),
+			'reportColumns'   => $this->get_all_report_columns(),
 		] );
 
 		if ( $current_page === 'omni-reports-builder' ) {
 			wp_enqueue_script(
+				'sortable-js',
+				'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js',
+				[],
+				'1.15.2',
+				true
+			);
+			wp_enqueue_script(
 				'omni-reports-builder',
 				OMNI_REPORTS_URL . 'assets/js/omni-reports-builder.js',
-				[ 'omni-reports-admin' ],
+				[ 'omni-reports-admin', 'sortable-js' ],
 				OMNI_REPORTS_VERSION,
 				true
 			);
 		}
+
+		// Load builder JS on all pages (activates only when #omni-dnd-builder exists).
+		wp_enqueue_script(
+			'omni-builder',
+			OMNI_REPORTS_URL . 'assets/js/omni-builder.js',
+			[ 'omni-reports-admin', 'jquery' ],
+			OMNI_REPORTS_VERSION,
+			true
+		);
+	}
+
+	/**
+	 * Admin notice: warn when products are below reorder point.
+	 */
+	public function reorder_notices() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) return;
+		$products     = Omni_Reports_Data_Store::get_stock_report();
+		$needs_reorder = array_filter( $products, fn( $p ) => ! empty( $p->needs_reorder ) );
+		if ( empty( $needs_reorder ) ) return;
+		$count = count( $needs_reorder );
+		$url   = admin_url( 'admin.php?page=omni-reports-stock' );
+		echo '<div class="notice notice-warning is-dismissible"><p>';
+		printf(
+			'<strong>Omni Reports:</strong> %d %s below reorder point. <a href="%s">View Stock Tracker &rarr;</a>',
+			esc_html( $count ),
+			esc_html( $count === 1 ? 'product is' : 'products are' ),
+			esc_url( $url )
+		);
+		echo '</p></div>';
 	}
 
 	/**
@@ -122,7 +166,8 @@ class Omni_Reports_Admin {
 		echo '<link rel="stylesheet" href="' . esc_url( includes_url( 'css/dashicons.min.css' ) ) . '" />';
 
 		$map = [
-			'omni-reports'            => 'page-dashboard',
+			'omni-reports'            => 'page-home',
+			'omni-reports-reports'    => 'page-dashboard',
 			'omni-reports-sales'      => 'page-sales',
 			'omni-reports-revenue'    => 'page-revenue',
 			'omni-reports-products'   => 'page-products',
@@ -133,6 +178,10 @@ class Omni_Reports_Admin {
 			'omni-reports-tax'        => 'page-tax',
 			'omni-reports-shipping'   => 'page-shipping',
 			'omni-reports-builder'    => 'page-builder',
+			'omni-reports-profit'     => 'page-profit',
+			'omni-reports-refunds'    => 'page-refunds',
+			'omni-reports-costs'      => 'page-costs',
+			'omni-reports-stock'      => 'page-stock',
 		];
 
 		$template = $map[ $page ] ?? 'page-dashboard';
@@ -147,8 +196,10 @@ class Omni_Reports_Admin {
 
 	private function render_top_nav( $current ) {
 		$tabs = [
-			'omni-reports'         => __( 'Sales Reports', 'omni-reports' ),
+			'omni-reports'         => __( 'Dashboard', 'omni-reports' ),
+			'omni-reports-reports' => __( 'Reports', 'omni-reports' ),
 			'omni-reports-builder' => __( 'Report Builder', 'omni-reports' ),
+			'omni-reports-costs'   => __( 'Cost Manager', 'omni-reports' ),
 		];
 		echo '<nav class="omni-top-nav">';
 		echo '<a class="omni-top-nav-brand" href="' . esc_url( admin_url( 'admin.php?page=omni-reports' ) ) . '">';
@@ -173,6 +224,16 @@ class Omni_Reports_Admin {
 			echo '<a class="omni-sub-nav-link' . esc_attr( $active ) . '" href="' . esc_url( admin_url( 'admin.php?page=' . $slug ) ) . '">' . esc_html( $r['name'] ) . '</a>';
 		}
 		echo '</nav>';
+	}
+
+	private function get_all_report_columns() {
+		$out     = [];
+		$reports = Omni_Reports_Registry::get_all();
+		foreach ( $reports as $r ) {
+			$slug = $r['slug'] ?? '';
+			$out[ $slug ] = Omni_Reports_Columns::get_enabled( $slug, $r['columns'] ?? [] );
+		}
+		return $out;
 	}
 
 	private function render( $template ) {

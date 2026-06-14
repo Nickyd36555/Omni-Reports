@@ -49,6 +49,7 @@ function omni_reports_init() {
 	}
 
 	require_once OMNI_REPORTS_DIR . 'includes/class-registry.php';
+	require_once OMNI_REPORTS_DIR . 'includes/class-columns.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-data-store.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-exporter.php';
 	require_once OMNI_REPORTS_DIR . 'includes/class-report-builder.php';
