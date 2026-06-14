@@ -123,7 +123,7 @@ class Omni_Reports_Data_Store {
 		$row = $this->wpdb->get_row( $sql );
 
 		// Fallback: if analytics table is empty or has zero revenue, query posts/postmeta directly.
-		if ( ! $row || ( floatval( $row->revenue ) == 0 && intval( $row->orders ) == 0 ) ) {
+		if ( ! $row || floatval( $row->revenue ) == 0 ) {
 			$row = $this->get_sales_overview_fallback( $from, $to );
 		}
 
@@ -197,7 +197,47 @@ class Omni_Reports_Data_Store {
 			$to
 		);
 
-		return $this->wpdb->get_results( $sql );
+		$rows = $this->wpdb->get_results( $sql );
+
+		// Fallback: if analytics table returned empty or zero-revenue data, use posts/postmeta.
+		$total_rev = array_sum( array_map( fn( $r ) => floatval( $r->revenue ), $rows ) );
+		if ( empty( $rows ) || $total_rev == 0 ) {
+			return $this->get_sales_over_time_fallback( $from, $to, $group );
+		}
+
+		return $rows;
+	}
+
+	private function get_sales_over_time_fallback( $from, $to, $group = 'day' ) {
+		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold', 'completed', 'processing', 'on-hold' ];
+		$in = $this->in_list( $revenue_statuses );
+		switch ( $group ) {
+			case 'week':
+				$date_expr = 'DATE(p.post_date - INTERVAL WEEKDAY(p.post_date) DAY)';
+				break;
+			case 'month':
+				$date_expr = "DATE_FORMAT(p.post_date,'%Y-%m-01')";
+				break;
+			default:
+				$date_expr = 'DATE(p.post_date)';
+		}
+		$sql = $this->wpdb->prepare(
+			"SELECT
+				{$date_expr} AS report_date,
+				SUM(CAST(pm.meta_value AS DECIMAL(12,2))) AS revenue,
+				SUM(CAST(pm.meta_value AS DECIMAL(12,2))) AS net_revenue,
+				COUNT(DISTINCT p.ID) AS orders,
+				0 AS refunds, 0 AS tax, 0 AS shipping, 0 AS qty_sold
+			FROM {$this->wpdb->posts} p
+			LEFT JOIN {$this->wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_order_total'
+			WHERE p.post_type = 'shop_order'
+			  AND p.post_status IN ({$in})
+			  AND p.post_date BETWEEN %s AND %s
+			GROUP BY report_date
+			ORDER BY report_date ASC",
+			$from, $to
+		);
+		return $this->wpdb->get_results( $sql ) ?: [];
 	}
 
 	// -------------------------------------------------------------------------
@@ -479,36 +519,41 @@ class Omni_Reports_Data_Store {
 			}
 		}
 
-		// Fallback: query from posts/postmeta + order_itemmeta for older WC or empty analytics tables.
+		// Fallback: query from order_items + order_itemmeta for older WC or empty analytics tables.
 		$search_clause = '';
-		$args          = [];
+		$search_args   = [];
 		if ( $search ) {
 			$like          = '%' . $this->wpdb->esc_like( $search ) . '%';
-			$search_clause = 'AND p.post_title LIKE %s';
-			$args[]        = $like;
+			$search_clause = 'AND oi.order_item_name LIKE %s';
+			$search_args[] = $like;
 		}
 
+		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold' ];
+		$status_in = $this->in_list( $revenue_statuses );
+
+		$args   = $search_args;
 		$args[] = $from;
 		$args[] = $to;
 
 		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders
 		$sql = $this->wpdb->prepare(
 			"SELECT
-				p.ID                     AS coupon_id,
-				p.post_title             AS coupon_code,
-				COUNT(DISTINCT oi.order_id) AS usage_count,
-				SUM(oim.meta_value + 0)  AS discount_amount,
-				0                        AS revenue
-			FROM {$this->wpdb->posts} p
-			INNER JOIN {$this->wpdb->prefix}woocommerce_order_itemmeta oim ON oim.meta_key = 'coupon_data'
-			INNER JOIN {$this->wpdb->prefix}woocommerce_order_items oi ON oi.order_item_id = oim.order_item_id AND oi.order_item_type = 'coupon' AND oi.order_item_name = p.post_title
-			INNER JOIN {$this->wpdb->posts} o ON o.ID = oi.order_id
-			WHERE p.post_type = 'shop_coupon'
-			  AND p.post_status = 'publish'
+				oi.order_item_name                              AS coupon_code,
+				COUNT(DISTINCT oi.order_id)                    AS usage_count,
+				SUM(CAST(oim.meta_value AS DECIMAL(12,4)))     AS discount_amount,
+				SUM(CAST(os_total.meta_value AS DECIMAL(12,2))) AS revenue
+			FROM {$this->wpdb->prefix}woocommerce_order_items oi
+			INNER JOIN {$this->wpdb->prefix}woocommerce_order_itemmeta oim
+				ON oi.order_item_id = oim.order_item_id AND oim.meta_key = 'discount_amount'
+			INNER JOIN {$this->wpdb->posts} p ON oi.order_id = p.ID
+			LEFT JOIN {$this->wpdb->postmeta} os_total
+				ON p.ID = os_total.post_id AND os_total.meta_key = '_order_total'
+			WHERE oi.order_item_type = 'coupon'
+			  AND p.post_status IN ({$status_in})
+			  AND p.post_date BETWEEN %s AND %s
 			  {$search_clause}
-			  AND o.post_date BETWEEN %s AND %s
-			GROUP BY p.ID
-			ORDER BY usage_count DESC
+			GROUP BY oi.order_item_name
+			ORDER BY discount_amount DESC
 			LIMIT 200",
 			...$args
 		);

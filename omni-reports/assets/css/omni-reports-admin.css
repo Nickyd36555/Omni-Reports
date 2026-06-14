@@ -778,7 +778,8 @@
 }
 
 .omni-chart-card canvas {
-	max-height: 240px !important;
+	max-height: 260px !important;
+	height: 260px !important;
 }
 
 .omni-chart-card h2 {

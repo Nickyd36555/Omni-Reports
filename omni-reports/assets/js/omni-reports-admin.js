@@ -96,7 +96,6 @@
 		var ctx = document.getElementById(id);
 		if (!ctx || !data || !data.length) return;
 
-		ctx.style.maxHeight = '240px';
 		charts[id] = new Chart(ctx, {
 			type: 'line',
 			data: {
@@ -113,7 +112,7 @@
 			},
 			options: {
 				responsive: true,
-				maintainAspectRatio: false,
+				maintainAspectRatio: true,
 				plugins: { legend: { display: false } },
 				scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } } }
 			}
@@ -128,7 +127,6 @@
 		// Limit to top 20 for readability.
 		var slice = data.slice(0, 20);
 
-		ctx.style.maxHeight = '240px';
 		charts[id] = new Chart(ctx, {
 			type: 'bar',
 			data: {
@@ -142,7 +140,7 @@
 			},
 			options: {
 				responsive: true,
-				maintainAspectRatio: false,
+				maintainAspectRatio: true,
 				plugins: { legend: { display: false } },
 				scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } } }
 			}
@@ -156,7 +154,6 @@
 
 		var slice = data.slice(0, 10);
 
-		ctx.style.maxHeight = '240px';
 		charts[id] = new Chart(ctx, {
 			type: 'doughnut',
 			data: {
@@ -168,7 +165,7 @@
 			},
 			options: {
 				responsive: true,
-				maintainAspectRatio: false,
+				maintainAspectRatio: true,
 				plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } }
 			}
 		});
