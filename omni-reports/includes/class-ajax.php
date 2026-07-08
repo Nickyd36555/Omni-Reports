@@ -49,6 +49,7 @@ class Omni_Reports_Ajax {
 			'omni_install_defaults',
 			// Dashboard Home
 			'omni_get_dashboard_home',
+			'omni_get_payment_methods_report',
 			// Stock Tracker
 			'omni_get_stock_report',
 			'omni_save_reorder_point',
@@ -457,6 +458,13 @@ class Omni_Reports_Ajax {
 		$this->verify_nonce();
 		[ $from, $to ] = $this->dates();
 		$data = $this->ds->get_dashboard_home( $from, $to );
+		wp_send_json_success( $data );
+	}
+
+	public function handle_omni_get_payment_methods_report() {
+		$this->verify_nonce();
+		[ $from, $to ] = $this->dates();
+		$data = $this->ds->get_payment_methods_report( $from, $to );
 		wp_send_json_success( $data );
 	}
 

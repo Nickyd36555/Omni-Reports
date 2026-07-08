@@ -1165,4 +1165,35 @@ class Omni_Reports_Data_Store {
 		unset( $p );
 		return $products;
 	}
+
+	// -------------------------------------------------------------------------
+	// Payment Methods
+	// -------------------------------------------------------------------------
+
+	public function get_payment_methods_report( $date_from, $date_to ) {
+		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
+
+		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold', 'completed', 'processing', 'on-hold' ];
+		$in = $this->in_list( $revenue_statuses );
+
+		$sql = $this->wpdb->prepare(
+			"SELECT
+				COALESCE(pm.meta_value, 'Unknown')   AS payment_method,
+				COALESCE(pm2.meta_value, pm.meta_value, 'Unknown') AS payment_method_title,
+				COUNT(DISTINCT p.ID)                 AS order_count,
+				SUM(CAST(pt.meta_value AS DECIMAL(12,2))) AS total_sales
+			FROM {$this->wpdb->posts} p
+			LEFT JOIN {$this->wpdb->postmeta} pm  ON p.ID = pm.post_id  AND pm.meta_key  = '_payment_method'
+			LEFT JOIN {$this->wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_payment_method_title'
+			LEFT JOIN {$this->wpdb->postmeta} pt  ON p.ID = pt.post_id  AND pt.meta_key  = '_order_total'
+			WHERE p.post_type = 'shop_order'
+			  AND p.post_status IN ({$in})
+			  AND p.post_date BETWEEN %s AND %s
+			GROUP BY pm.meta_value
+			ORDER BY total_sales DESC",
+			$from, $to
+		);
+
+		return $this->wpdb->get_results( $sql ) ?: [];
+	}
 }
