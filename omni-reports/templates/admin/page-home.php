@@ -1,295 +1,293 @@
-<?php
-/**
- * Dashboard Home page — Metorik-style layout.
- *
- * @package OmniReports
- */
-defined( 'ABSPATH' ) || exit;
-?>
-<div class="omni-page-inner">
+<?php defined( 'ABSPATH' ) || exit; ?>
+<div class="wrap omni-reports-wrap omni-dash-v2" data-report="home">
+
 	<?php include __DIR__ . '/partials/date-filter.php'; ?>
 
-	<!-- Main 2-col: chart + in-this-period -->
-	<div class="omni-dash-main-row">
-		<!-- Chart card -->
-		<div class="omni-card omni-dash-chart-card">
-			<div class="omni-dash-chart-header">
-				<span class="omni-card-title">Revenue Overview</span>
-				<div class="omni-dash-chart-controls">
-					<div class="omni-group-toggle">
-						<button class="omni-group-btn active" data-group="day">Day</button>
-						<button class="omni-group-btn" data-group="week">Week</button>
-						<button class="omni-group-btn" data-group="month">Month</button>
-					</div>
+	<!-- Row 1: Total Sales hero + payment methods -->
+	<div class="omni-dash2-top">
+
+		<!-- Total Sales hero -->
+		<div class="omni-chart-card omni-dash2-hero">
+			<div class="omni-dash2-hero-label"><?php esc_html_e( 'Total Sales', 'omni-reports' ); ?></div>
+			<div class="omni-dash2-hero-value" id="dash-total-sales">—</div>
+			<div class="omni-dash2-hero-sub">
+				<span id="dash-total-orders">—</span> orders &nbsp;·&nbsp; avg <span id="dash-avg-order">—</span>
+			</div>
+		</div>
+
+		<!-- Sales by payment method -->
+		<div class="omni-chart-card omni-dash2-payment">
+			<h2><?php esc_html_e( 'Sales by Payment Method', 'omni-reports' ); ?></h2>
+			<div class="omni-dash2-payment-inner">
+				<div class="omni-dash2-payment-chart-wrap">
+					<canvas id="dash-payment-donut" width="160" height="160"></canvas>
+				</div>
+				<div id="dash-payment-list" class="omni-dash2-payment-list">
+					<p class="omni-loading"><span class="omni-spinner"></span></p>
 				</div>
 			</div>
-			<div class="omni-dash-chart-container">
-				<canvas id="omni-dash-main-chart"></canvas>
-			</div>
-		</div>
-
-		<!-- In This Period sidebar -->
-		<div class="omni-card omni-dash-period-card">
-			<div class="omni-card-header">
-				<span class="omni-period-label">IN THIS PERIOD</span>
-			</div>
-			<div class="omni-period-grid" id="omni-period-grid">
-				<!-- populated by JS -->
-			</div>
 		</div>
 	</div>
 
-	<!-- Bottom strip 1: 6 financial KPIs -->
-	<div class="omni-dash-strip" id="omni-dash-strip-1">
-		<!-- populated by JS -->
-	</div>
-
-	<!-- Bottom strip 2: weekly stats -->
-	<div class="omni-dash-weekly-strip" id="omni-dash-weekly-strip">
-		<!-- populated by JS -->
-	</div>
-
-	<!-- New vs Returning placeholder -->
-	<div class="omni-card omni-dash-bottom-row" style="padding:20px;margin-top:14px;">
-		<div class="omni-card-header" style="padding:0 0 12px;"><span class="omni-card-title">New vs. Returning Customers</span></div>
-		<div class="omni-home-bottom-row">
-			<div class="omni-home-bottom-card" style="padding:0;">
-				<canvas id="omni-home-products-donut" width="150" height="150"></canvas>
-				<div id="omni-top-products-table" class="omni-home-mini-table" style="margin-top:8px;"></div>
+	<!-- Row 2: Products sold by product -->
+	<div class="omni-chart-card">
+		<h2><?php esc_html_e( 'Products Sold', 'omni-reports' ); ?></h2>
+		<div class="omni-dash2-products-inner">
+			<div style="position:relative;height:240px;flex:1;min-width:260px;">
+				<canvas id="dash-products-bar"></canvas>
 			</div>
-			<div class="omni-home-bottom-card" style="padding:0;">
-				<canvas id="omni-home-status-chart" height="130"></canvas>
-				<div id="omni-top-customers-table" class="omni-home-mini-table" style="margin-top:8px;"></div>
-			</div>
+			<div id="dash-products-table" class="omni-dash2-products-table"></div>
 		</div>
 	</div>
+
+	<!-- Row 3: Customer list -->
+	<div class="omni-chart-card">
+		<h2><?php esc_html_e( 'Customers', 'omni-reports' ); ?></h2>
+		<div class="omni-dash2-cust-header">
+			<div id="dash-cust-kpis" class="omni-dash2-cust-kpis">
+				<div class="omni-dash2-cust-kpi"><span class="omni-kpi-label">New</span><span class="omni-kpi-value" id="dash-cust-new">—</span></div>
+				<div class="omni-dash2-cust-kpi"><span class="omni-kpi-label">Returning</span><span class="omni-kpi-value" id="dash-cust-ret">—</span></div>
+				<div class="omni-dash2-cust-kpi"><span class="omni-kpi-label">Unique</span><span class="omni-kpi-value" id="dash-cust-uniq">—</span></div>
+			</div>
+		</div>
+		<div id="dash-customers-wrap">
+			<p class="omni-loading"><span class="omni-spinner"></span><?php esc_html_e( 'Loading…', 'omni-reports' ); ?></p>
+		</div>
+	</div>
+
 </div>
+
+<style>
+.omni-dash2-top {
+	display: grid;
+	grid-template-columns: 220px 1fr;
+	gap: 14px;
+	margin-bottom: 14px;
+}
+@media (max-width: 860px) { .omni-dash2-top { grid-template-columns: 1fr; } }
+
+.omni-dash2-hero {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 24px 20px !important;
+}
+.omni-dash2-hero-label {
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .07em;
+	color: var(--omni-muted);
+}
+.omni-dash2-hero-value {
+	font-size: 38px;
+	font-weight: 800;
+	color: var(--omni-text);
+	line-height: 1.1;
+}
+.omni-dash2-hero-sub { font-size: 12px; color: var(--omni-muted); }
+
+.omni-dash2-payment h2 { margin-bottom: 10px; }
+.omni-dash2-payment-inner { display: flex; align-items: flex-start; gap: 16px; }
+.omni-dash2-payment-chart-wrap { flex-shrink: 0; }
+.omni-dash2-payment-list { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+.omni-pay-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.omni-pay-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.omni-pay-label { flex: 1; color: var(--omni-text); font-weight: 500; }
+.omni-pay-amount { font-weight: 700; color: var(--omni-text); }
+.omni-pay-count { color: var(--omni-muted); font-size: 11px; margin-left: 2px; }
+.omni-pay-bar-wrap { width: 70px; background: var(--omni-border); border-radius: 4px; height: 5px; flex-shrink: 0; }
+.omni-pay-bar { height: 5px; border-radius: 4px; }
+
+.omni-dash2-products-inner { display: flex; gap: 20px; align-items: flex-start; }
+.omni-dash2-products-table { flex: 1; min-width: 0; overflow-x: auto; }
+
+.omni-dash2-cust-header { margin-bottom: 14px; }
+.omni-dash2-cust-kpis { display: flex; gap: 24px; flex-wrap: wrap; }
+.omni-dash2-cust-kpi { display: flex; flex-direction: column; gap: 2px; }
+.omni-dash2-cust-kpi .omni-kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--omni-muted); }
+.omni-dash2-cust-kpi .omni-kpi-value { font-size: 22px; font-weight: 800; color: var(--omni-text); }
+
+.omni-badge-new {
+	display: inline-block; padding: 2px 8px; border-radius: 20px;
+	font-size: 10px; font-weight: 600;
+	background: rgba(0,212,170,.12); color: #00A389; border: 1px solid rgba(0,212,170,.25);
+}
+.omni-badge-returning {
+	display: inline-block; padding: 2px 8px; border-radius: 20px;
+	font-size: 10px; font-weight: 600;
+	background: rgba(99,102,241,.1); color: #4F46E5; border: 1px solid rgba(99,102,241,.2);
+}
+</style>
 
 <script>
 (function($){
-	var mainChart = null, donutChart = null, statusChart = null;
-	var f = omniReports.formatCurrency;
-	var currentGroup = 'day';
-
-	function pct(curr, prev) {
-		curr = parseFloat(curr) || 0;
-		prev = parseFloat(prev) || 0;
-		if (!prev) return null;
-		return ((curr - prev) / Math.abs(prev)) * 100;
-	}
-
-	function changeBadge(curr, prev) {
-		var p = pct(curr, prev);
-		if (p === null) return '<span class="omni-muted-text">—</span>';
-		var up = p >= 0;
-		var cls = up ? 'omni-chg-up' : 'omni-chg-down';
-		var arrow = up ? '↑' : '↓';
-		return '<span class="' + cls + '">' + arrow + ' ' + Math.abs(p).toFixed(1) + '%</span>';
-	}
-
-	function renderPeriodGrid(s, c) {
-		var metrics = [
-			{label:'Net Sales',       curr: s.net_revenue||s.revenue||0,  prev: c.net_revenue||c.revenue||0,  fmt:'currency'},
-			{label:'Gross Sales',     curr: s.revenue||0,                  prev: c.revenue||0,                  fmt:'currency'},
-			{label:'Orders',          curr: s.orders||0,                   prev: c.orders||0,                   fmt:'number'},
-			{label:'Items',           curr: s.items_sold||0,               prev: c.items_sold||0,               fmt:'number'},
-			{label:'Avg Order Net',   curr: s.avg_order_value||0,          prev: c.avg_order_value||0,          fmt:'currency'},
-			{label:'Avg Order Gross', curr: s.revenue&&s.orders ? s.revenue/s.orders : 0, prev: c.revenue&&c.orders ? c.revenue/c.orders : 0, fmt:'currency'},
-			{label:'Refund Rate',     curr: s.refund_rate||0,              prev: c.refund_rate||0,              fmt:'percent'},
-		];
-		var html = '';
-		metrics.forEach(function(m) {
-			var val = m.fmt === 'currency' ? f(m.curr) : m.fmt === 'percent' ? parseFloat(m.curr).toFixed(2)+'%' : parseInt(m.curr).toLocaleString();
-			html += '<div class="omni-period-metric">' +
-				'<div class="omni-period-metric-val">' + val + ' ' + changeBadge(m.curr, m.prev) + '</div>' +
-				'<div class="omni-period-metric-label">' + m.label + '</div>' +
-				'</div>';
-		});
-		$('#omni-period-grid').html(html);
-	}
-
-	function renderStrip1(s, c) {
-		var items = [
-			{label:'Gross Sales', curr:s.revenue||0,   prev:c.revenue||0,   fmt:'currency'},
-			{label:'Refunds',     curr:s.refunds||0,   prev:c.refunds||0,   fmt:'currency'},
-			{label:'Discounts',   curr:s.discounts||0, prev:c.discounts||0, fmt:'currency'},
-			{label:'Taxes',       curr:s.tax||0,       prev:c.tax||0,       fmt:'currency'},
-			{label:'Shipping',    curr:s.shipping||0,  prev:c.shipping||0,  fmt:'currency'},
-			{label:'Fees',        curr:s.fees||0,      prev:c.fees||0,      fmt:'currency'},
-		];
-		var html = '';
-		items.forEach(function(m) {
-			var val = f(m.curr);
-			html += '<div class="omni-strip-card">' +
-				'<div class="omni-strip-val">' + val + ' ' + changeBadge(m.curr, m.prev) + '</div>' +
-				'<div class="omni-strip-label">' + m.label + '</div>' +
-				'</div>';
-		});
-		$('#omni-dash-strip-1').html(html);
-	}
-
-	function renderWeeklyStrip(ws, pws) {
-		ws  = ws  || {};
-		pws = pws || {};
-		var items = [
-			{label:'Weekly Net',    curr:ws.weekly_net||0,    prev:pws.weekly_net||0,    fmt:'currency'},
-			{label:'Weekly Gross',  curr:ws.weekly_gross||0,  prev:pws.weekly_gross||0,  fmt:'currency'},
-			{label:'Weekly Orders', curr:ws.weekly_orders||0, prev:pws.weekly_orders||0, fmt:'number'},
-			{label:'Weekly Items',  curr:ws.weekly_items||0,  prev:pws.weekly_items||0,  fmt:'number'},
-		];
-		var html = '';
-		items.forEach(function(m) {
-			var val = m.fmt === 'currency' ? f(m.curr) : parseInt(m.curr).toLocaleString();
-			html += '<div class="omni-weekly-stat">' +
-				'<span class="omni-weekly-stat-val">' + val + '</span>' +
-				'<span class="omni-weekly-stat-label">' + m.label + '</span>' +
-				changeBadge(m.curr, m.prev) +
-				'</div>';
-		});
-		$('#omni-dash-weekly-strip').html(html);
-	}
-
-	function renderMainChart(chartData) {
-		var ctx = document.getElementById('omni-dash-main-chart');
-		if (!ctx || !chartData) return;
-		if (mainChart) { mainChart.destroy(); mainChart = null; }
-
-		var labels = chartData.labels || [];
-		var ds = chartData.datasets || [];
-		var barDs   = ds.find(function(d){ return d.type==='bar' && !d.dashed; }) || {};
-		var lineDs  = ds.find(function(d){ return d.type==='line' && !d.dashed; }) || {};
-		var priorDs = ds.find(function(d){ return d.dashed; }) || {};
-
-		mainChart = new Chart(ctx, {
-			type: 'bar',
-			data: {
-				labels: labels,
-				datasets: [
-					{
-						label: 'Gross Sales',
-						data: barDs.data || [],
-						backgroundColor: 'rgba(99,102,241,0.18)',
-						borderColor: 'rgba(99,102,241,0.4)',
-						borderWidth: 1,
-						borderRadius: 3,
-						order: 2,
-					},
-					{
-						label: 'Net Sales',
-						data: lineDs.data || [],
-						type: 'line',
-						borderColor: '#6366F1',
-						backgroundColor: 'rgba(99,102,241,0.08)',
-						pointRadius: labels.length > 60 ? 0 : 3,
-						pointHoverRadius: 5,
-						tension: 0.3,
-						fill: true,
-						order: 1,
-					},
-					{
-						label: 'Prior Gross',
-						data: priorDs.data || [],
-						type: 'line',
-						borderColor: 'rgba(156,163,175,0.5)',
-						borderDash: [5,4],
-						backgroundColor: 'transparent',
-						pointRadius: 0,
-						tension: 0.3,
-						order: 3,
-					}
-				]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				interaction: { mode: 'index', intersect: false },
-				plugins: {
-					legend: { display: true, position: 'top', labels: { boxWidth: 10, font: {size:10} } },
-					tooltip: {
-						callbacks: {
-							label: function(ctx) {
-								var v = ctx.parsed.y;
-								if (ctx.dataset.label && ctx.dataset.label.includes('Orders')) return ctx.dataset.label + ': ' + parseInt(v).toLocaleString();
-								return ctx.dataset.label + ': ' + omniReports.formatCurrency(v);
-							}
-						}
-					}
-				},
-				scales: {
-					y: { beginAtZero: true, ticks: { font:{size:10}, callback: function(v){ return '$'+v.toLocaleString(); } }, grid: {color:'#F0F4F8'} },
-					x: { ticks: { font:{size:9}, maxRotation:45, maxTicksLimit:20 }, grid:{display:false} }
-				}
-			}
-		});
-	}
-
-	function renderBottomCharts(d) {
-		// Top products donut
-		if (d.top_products && d.top_products.length) {
-			var top = d.top_products.slice(0,8);
-			var ctx2 = document.getElementById('omni-home-products-donut');
-			if (donutChart) { donutChart.destroy(); donutChart = null; }
-			var colors = ['#6366F1','#00D4AA','#F59E0B','#EF4444','#10B981','#3B82F6','#EC4899','#8B5CF6'];
-			donutChart = new Chart(ctx2, {
-				type:'doughnut',
-				data:{ labels:top.map(function(p){return p.product_name||'';}), datasets:[{data:top.map(function(p){return parseFloat(p.revenue)||0;}), backgroundColor:colors, borderWidth:2}]},
-				options:{ responsive:false, plugins:{legend:{display:false}}, cutout:'65%' }
-			});
-			var html='<table class="omni-data-table omni-mini-table"><thead><tr><th>Product</th><th>Revenue</th><th>Qty</th></tr></thead><tbody>';
-			top.forEach(function(p){ html+='<tr><td>'+($('<span>').text(p.product_name||'').html())+'</td><td>'+f(p.revenue)+'</td><td>'+(parseInt(p.qty_sold||0)).toLocaleString()+'</td></tr>'; });
-			html+='</tbody></table>';
-			$('#omni-top-products-table').html(html);
-		}
-		// Status chart
-		if (d.order_status_breakdown && d.order_status_breakdown.length) {
-			var ctx3 = document.getElementById('omni-home-status-chart');
-			if (statusChart) { statusChart.destroy(); statusChart = null; }
-			statusChart = new Chart(ctx3, {
-				type:'bar',
-				data:{ labels:d.order_status_breakdown.map(function(s){return s.status||'';}), datasets:[{label:'Orders',data:d.order_status_breakdown.map(function(s){return parseInt(s.order_count)||0;}),backgroundColor:'#6366F1',borderRadius:4}]},
-				options:{ responsive:true, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}} }
-			});
-		}
-		// Top customers
-		if (d.top_customers && d.top_customers.length) {
-			var top2 = d.top_customers.slice(0,6);
-			var html2='<table class="omni-data-table omni-mini-table"><thead><tr><th>Customer</th><th>LTV</th><th>Orders</th></tr></thead><tbody>';
-			top2.forEach(function(c){ var nm=((c.first_name||'')+' '+(c.last_name||'')).trim()||c.email||'Guest'; html2+='<tr><td>'+($('<span>').text(nm).html())+'</td><td>'+f(c.ltv)+'</td><td>'+(parseInt(c.order_count||0)).toLocaleString()+'</td></tr>'; });
-			html2+='</tbody></table>';
-			$('#omni-top-customers-table').html(html2);
-		}
-	}
+	var fmt = omniReports.formatCurrency;
+	var PAL = ['#6366F1','#00D4AA','#F59E0B','#EF4444','#10B981','#3B82F6','#EC4899','#8B5CF6','#F97316','#06B6D4'];
+	var payChart = null, prodChart = null;
 
 	function load(from, to) {
+		loadSalesOverview(from, to);
+		loadPaymentMethods(from, to);
+		loadProducts(from, to);
+		loadCustomers(from, to);
+	}
+
+	function loadSalesOverview(from, to) {
 		$.post(omniReports.ajaxUrl, {
-			action: 'omni_get_dashboard_home',
-			nonce: omniReports.nonce,
-			date_from: from,
-			date_to: to,
-		}, function(res) {
-			if (!res.success) return;
-			var d = res.data;
-			var s = d.summary || {};
-			var c = d.comp_summary || {};
-			renderPeriodGrid(s, c);
-			renderStrip1(s, c);
-			renderWeeklyStrip(d.weekly_summary, d.comp_weekly_summary);
-			if (d.revenue_chart) renderMainChart(d.revenue_chart);
-			renderBottomCharts(d);
+			action: 'omni_get_sales_overview', nonce: omniReports.nonce,
+			date_from: from, date_to: to,
+		}, function(r) {
+			if (!r.success) return;
+			var d = r.data || {};
+			$('#dash-total-sales').text(fmt(d.revenue || 0));
+			$('#dash-total-orders').text(parseInt(d.orders || 0).toLocaleString());
+			$('#dash-avg-order').text(fmt(d.avg_order_value || 0));
 		});
 	}
 
-	// Group toggle
-	$(document).on('click', '.omni-group-btn', function() {
-		$('.omni-group-btn').removeClass('active');
-		$(this).addClass('active');
-		currentGroup = $(this).data('group');
-		load(omniReports.currentFrom ? omniReports.currentFrom() : '', omniReports.currentTo ? omniReports.currentTo() : '');
-	});
+	function loadPaymentMethods(from, to) {
+		$('#dash-payment-list').html('<p class="omni-loading"><span class="omni-spinner"></span></p>');
+		$.post(omniReports.ajaxUrl, {
+			action: 'omni_get_payment_methods_report', nonce: omniReports.nonce,
+			date_from: from, date_to: to,
+		}, function(r) {
+			if (!r.success) return;
+			var rows = r.data || [];
+			if (!rows.length) {
+				$('#dash-payment-list').html('<p class="omni-empty-state" style="padding:16px 0">No payment data.</p>');
+				return;
+			}
+			var total = rows.reduce(function(s, d){ return s + (parseFloat(d.total_sales)||0); }, 0);
 
-	$(document).ready(function() {
-		load(omniReports.currentFrom ? omniReports.currentFrom() : '', omniReports.currentTo ? omniReports.currentTo() : '');
-		if (omniReports.onDateChange) omniReports.onDateChange(function(from, to){ load(from, to); });
-	});
+			if (payChart) { payChart.destroy(); payChart = null; }
+			var ctx = document.getElementById('dash-payment-donut');
+			if (ctx) {
+				payChart = new Chart(ctx, {
+					type: 'doughnut',
+					data: {
+						labels: rows.map(function(d){ return d.payment_method_title || d.payment_method || 'Unknown'; }),
+						datasets: [{ data: rows.map(function(d){ return parseFloat(d.total_sales)||0; }), backgroundColor: PAL, borderWidth: 2, borderColor: '#fff' }]
+					},
+					options: {
+						responsive: false, cutout: '68%',
+						plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c){ return ' ' + fmt(c.parsed); } } } }
+					}
+				});
+			}
+
+			var html = '';
+			rows.forEach(function(d, i) {
+				var amt   = parseFloat(d.total_sales) || 0;
+				var pct   = total > 0 ? (amt / total * 100) : 0;
+				var title = d.payment_method_title || d.payment_method || 'Unknown';
+				html += '<div class="omni-pay-row">' +
+					'<span class="omni-pay-dot" style="background:' + PAL[i % PAL.length] + '"></span>' +
+					'<span class="omni-pay-label">' + $('<span>').text(title).html() + '</span>' +
+					'<div class="omni-pay-bar-wrap"><div class="omni-pay-bar" style="width:' + pct.toFixed(1) + '%;background:' + PAL[i % PAL.length] + '"></div></div>' +
+					'<span class="omni-pay-amount">' + fmt(amt) + '</span>' +
+					'<span class="omni-pay-count">(' + parseInt(d.order_count || 0).toLocaleString() + ')</span>' +
+					'</div>';
+			});
+			$('#dash-payment-list').html(html);
+		});
+	}
+
+	function loadProducts(from, to) {
+		$('#dash-products-table').html('<p class="omni-loading"><span class="omni-spinner"></span></p>');
+		$.post(omniReports.ajaxUrl, {
+			action: 'omni_get_products_report', nonce: omniReports.nonce,
+			date_from: from, date_to: to, limit: 50,
+		}, function(r) {
+			if (!r.success) return;
+			var rows = r.data || [];
+			if (!rows.length) {
+				$('#dash-products-table').html('<p class="omni-empty-state" style="padding:20px 0">No products sold.</p>');
+				return;
+			}
+
+			var top = rows.slice(0, 12);
+			if (prodChart) { prodChart.destroy(); prodChart = null; }
+			var ctx2 = document.getElementById('dash-products-bar');
+			if (ctx2) {
+				prodChart = new Chart(ctx2, {
+					type: 'bar',
+					data: {
+						labels: top.map(function(d){ return d.product_name || ''; }),
+						datasets: [{ label: 'Qty Sold', data: top.map(function(d){ return parseInt(d.qty_sold)||0; }), backgroundColor: '#6366F1', borderRadius: 4 }]
+					},
+					options: {
+						responsive: true, maintainAspectRatio: false,
+						plugins: { legend: { display: false } },
+						scales: {
+							y: { beginAtZero: true, ticks: { font:{size:10} } },
+							x: { ticks: { font:{size:9}, maxRotation: 45, maxTicksLimit: 12 }, grid: { display: false } }
+						}
+					}
+				});
+			}
+
+			var html = '<table class="omni-data-table"><thead><tr>' +
+				'<th>Product</th><th class="num">Qty Sold</th><th class="num">Revenue</th><th class="num">Orders</th>' +
+				'</tr></thead><tbody>';
+			rows.forEach(function(d) {
+				html += '<tr>' +
+					'<td><strong>' + $('<span>').text(d.product_name || '—').html() + '</strong></td>' +
+					'<td class="num">' + (parseInt(d.qty_sold)||0).toLocaleString() + '</td>' +
+					'<td class="num">' + fmt(parseFloat(d.revenue)||0) + '</td>' +
+					'<td class="num">' + (parseInt(d.orders)||0).toLocaleString() + '</td>' +
+					'</tr>';
+			});
+			html += '</tbody></table>';
+			$('#dash-products-table').html(html);
+		});
+	}
+
+	function loadCustomers(from, to) {
+		$('#dash-customers-wrap').html('<p class="omni-loading"><span class="omni-spinner"></span>Loading…</p>');
+		$.post(omniReports.ajaxUrl, {
+			action: 'omni_get_customers_report', nonce: omniReports.nonce,
+			date_from: from, date_to: to,
+		}, function(r) {
+			if (!r.success) return;
+			var d = r.data || {};
+			var s = d.summary || {};
+			$('#dash-cust-new').text(parseInt(s.new_customers || 0).toLocaleString());
+			$('#dash-cust-ret').text(parseInt(s.returning_customers || 0).toLocaleString());
+			$('#dash-cust-uniq').text(parseInt(s.unique_customers || 0).toLocaleString());
+
+			var customers = d.top_customers || [];
+			if (!customers.length) {
+				$('#dash-customers-wrap').html('<p class="omni-empty-state">No customer data for this period.</p>');
+				return;
+			}
+
+			var html = '<table class="omni-data-table"><thead><tr>' +
+				'<th>Name</th><th>Email</th><th>Type</th><th class="num">Orders</th><th class="num">Total Spend</th>' +
+				'</tr></thead><tbody>';
+			customers.forEach(function(c) {
+				var name = (((c.first_name || '') + ' ' + (c.last_name || '')).trim()) || 'Guest';
+				var isReturning = parseInt(c.order_count || 0) > 1;
+				var badge = isReturning
+					? '<span class="omni-badge-returning">Returning</span>'
+					: '<span class="omni-badge-new">New</span>';
+				html += '<tr>' +
+					'<td><strong>' + $('<span>').text(name).html() + '</strong></td>' +
+					'<td style="color:var(--omni-muted);font-size:12px">' + $('<span>').text(c.email || '').html() + '</td>' +
+					'<td>' + badge + '</td>' +
+					'<td class="num">' + parseInt(c.order_count || 0).toLocaleString() + '</td>' +
+					'<td class="num"><strong>' + fmt(parseFloat(c.ltv) || 0) + '</strong></td>' +
+					'</tr>';
+			});
+			html += '</tbody></table>';
+			$('#dash-customers-wrap').html(html);
+		});
+	}
+
+	omniReports.onDateChange(load);
+	$(function(){ load(omniReports.currentFrom(), omniReports.currentTo()); });
 })(jQuery);
 </script>
