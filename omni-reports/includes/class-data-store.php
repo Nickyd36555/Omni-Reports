@@ -483,34 +483,35 @@ class Omni_Reports_Data_Store {
 	 */
 	public function get_coupons_report( $date_from, $date_to, $search = '' ) {
 		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
-		$cl            = $this->wpdb->prefix . 'wc_order_coupon_lookup';
-		$os            = $this->wpdb->prefix . 'wc_order_stats';
+		$cl = $this->wpdb->prefix . 'wc_order_coupon_lookup';
+		$os = $this->wpdb->prefix . 'wc_order_stats';
 
-		// Check if analytics tables exist.
+		// Try analytics tables first
 		if ( $this->analytics_tables_exist() ) {
 			$search_clause = '';
+			$args = [ $from, $to ];
 			if ( $search ) {
-				$like          = '%' . $this->wpdb->esc_like( strtolower( $search ) ) . '%';
-				$search_clause = $this->wpdb->prepare( ' AND LOWER(cl.coupon_code) LIKE %s', $like );
+				$like = '%' . $this->wpdb->esc_like( strtolower( $search ) ) . '%';
+				$search_clause = ' AND LOWER(cl.coupon_code) LIKE %s';
+				$args[] = $like;
 			}
 
 			$sql = $this->wpdb->prepare(
 				"SELECT
 					cl.coupon_id,
 					cl.coupon_code,
-					COUNT(DISTINCT cl.order_id)  AS usage_count,
-					SUM(cl.discount_amount)      AS discount_amount,
-					SUM(os.total_sales)          AS revenue
+					COUNT(DISTINCT cl.order_id)     AS usage_count,
+					SUM(cl.discount_amount)          AS discount_amount,
+					SUM(os.total_sales)              AS revenue
 				FROM {$cl} cl
 				INNER JOIN {$os} os ON cl.order_id = os.order_id
 				WHERE os.status NOT IN ({$this->excluded_in()})
 				  AND os.date_created BETWEEN %s AND %s
 				  {$search_clause}
 				GROUP BY cl.coupon_id, cl.coupon_code
-				ORDER BY usage_count DESC
+				ORDER BY discount_amount DESC
 				LIMIT 200",
-				$from,
-				$to
+				...$args
 			);
 
 			$rows = $this->wpdb->get_results( $sql );
@@ -519,43 +520,32 @@ class Omni_Reports_Data_Store {
 			}
 		}
 
-		// Fallback: query from order_items + order_itemmeta for older WC or empty analytics tables.
-		$search_clause = '';
-		$search_args   = [];
-		if ( $search ) {
-			$like          = '%' . $this->wpdb->esc_like( $search ) . '%';
-			$search_clause = 'AND oi.order_item_name LIKE %s';
-			$search_args[] = $like;
-		}
-
-		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold' ];
+		// Fallback: order items query
+		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold', 'completed', 'processing', 'on-hold' ];
 		$status_in = $this->in_list( $revenue_statuses );
 
-		$args   = $search_args;
-		$args[] = $from;
-		$args[] = $to;
+		$search_sql = $search ? $this->wpdb->prepare( ' AND LOWER(oi.order_item_name) LIKE LOWER(%s)', '%' . $this->wpdb->esc_like( $search ) . '%' ) : '';
 
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders
 		$sql = $this->wpdb->prepare(
 			"SELECT
-				oi.order_item_name                              AS coupon_code,
-				COUNT(DISTINCT oi.order_id)                    AS usage_count,
-				SUM(CAST(oim.meta_value AS DECIMAL(12,4)))     AS discount_amount,
-				SUM(CAST(os_total.meta_value AS DECIMAL(12,2))) AS revenue
+				oi.order_item_name                               AS coupon_code,
+				COUNT(DISTINCT oi.order_id)                      AS usage_count,
+				SUM(CAST(oim.meta_value AS DECIMAL(12,4)))       AS discount_amount,
+				SUM(CAST(pm_total.meta_value AS DECIMAL(12,2)))  AS revenue
 			FROM {$this->wpdb->prefix}woocommerce_order_items oi
 			INNER JOIN {$this->wpdb->prefix}woocommerce_order_itemmeta oim
 				ON oi.order_item_id = oim.order_item_id AND oim.meta_key = 'discount_amount'
 			INNER JOIN {$this->wpdb->posts} p ON oi.order_id = p.ID
-			LEFT JOIN {$this->wpdb->postmeta} os_total
-				ON p.ID = os_total.post_id AND os_total.meta_key = '_order_total'
+			LEFT JOIN {$this->wpdb->postmeta} pm_total
+				ON p.ID = pm_total.post_id AND pm_total.meta_key = '_order_total'
 			WHERE oi.order_item_type = 'coupon'
 			  AND p.post_status IN ({$status_in})
 			  AND p.post_date BETWEEN %s AND %s
-			  {$search_clause}
+			  {$search_sql}
 			GROUP BY oi.order_item_name
 			ORDER BY discount_amount DESC
 			LIMIT 200",
-			...$args
+			$from, $to
 		);
 
 		return $this->wpdb->get_results( $sql ) ?: [];
@@ -1174,5 +1164,36 @@ class Omni_Reports_Data_Store {
 		}
 		unset( $p );
 		return $products;
+	}
+
+	// -------------------------------------------------------------------------
+	// Payment Methods
+	// -------------------------------------------------------------------------
+
+	public function get_payment_methods_report( $date_from, $date_to ) {
+		[ $from, $to ] = $this->sanitize_dates( $date_from, $date_to );
+
+		$revenue_statuses = [ 'wc-completed', 'wc-processing', 'wc-on-hold', 'completed', 'processing', 'on-hold' ];
+		$in = $this->in_list( $revenue_statuses );
+
+		$sql = $this->wpdb->prepare(
+			"SELECT
+				COALESCE(pm.meta_value, 'Unknown')   AS payment_method,
+				COALESCE(pm2.meta_value, pm.meta_value, 'Unknown') AS payment_method_title,
+				COUNT(DISTINCT p.ID)                 AS order_count,
+				SUM(CAST(pt.meta_value AS DECIMAL(12,2))) AS total_sales
+			FROM {$this->wpdb->posts} p
+			LEFT JOIN {$this->wpdb->postmeta} pm  ON p.ID = pm.post_id  AND pm.meta_key  = '_payment_method'
+			LEFT JOIN {$this->wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_payment_method_title'
+			LEFT JOIN {$this->wpdb->postmeta} pt  ON p.ID = pt.post_id  AND pt.meta_key  = '_order_total'
+			WHERE p.post_type = 'shop_order'
+			  AND p.post_status IN ({$in})
+			  AND p.post_date BETWEEN %s AND %s
+			GROUP BY pm.meta_value
+			ORDER BY total_sales DESC",
+			$from, $to
+		);
+
+		return $this->wpdb->get_results( $sql ) ?: [];
 	}
 }
