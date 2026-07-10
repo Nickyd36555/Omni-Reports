@@ -198,7 +198,6 @@ class Omni_Reports_Admin {
 
 		echo '<div class="omni-app">';
 		$this->render_top_nav( $page );
-		$this->render_sub_nav( $page );
 		echo '<div class="omni-page">';
 		$this->render( $template );
 		echo '</div></div>';
